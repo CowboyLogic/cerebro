@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import chalk from 'chalk';
@@ -181,7 +182,12 @@ program
     }
   });
 
-program.parse();
+// Only auto-parse when executed directly (not when imported in tests)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  program.parse();
+}
+
+export { program };
 
 function getTypeIcon(type: ComponentType): string {
   const map: Record<string, string> = {

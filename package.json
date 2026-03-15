@@ -10,7 +10,13 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "postbuild": "chmod +x bin/ai-install.js 2>/dev/null || true"
+    "postbuild": "chmod +x bin/ai-install.js 2>/dev/null || true",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:cli": "vitest run tests/cli"
   },
   "keywords": [
     "ai",
@@ -33,7 +39,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "memfs": "^4.56.11",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
   }
 }
