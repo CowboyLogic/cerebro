@@ -22,9 +22,15 @@ program
   .description('Install AI components (skills, agents, prompts) from GitHub into your IDE')
   .version('1.0.0');
 
-// Default: interactive mode
+// Default: interactive mode when no subcommand is given
 program
-  .command('interactive', { isDefault: true })
+  .action(async () => {
+    await runInteractive();
+  });
+
+// Also available as an explicit subcommand
+program
+  .command('interactive')
   .description('Launch interactive installer UI')
   .action(async () => {
     await runInteractive();
@@ -184,7 +190,10 @@ program
 
 // Only auto-parse when executed directly (not when imported in tests)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  program.parse();
+  program.parseAsync().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
 
 export { program };
