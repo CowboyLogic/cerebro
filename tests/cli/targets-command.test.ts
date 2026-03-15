@@ -14,7 +14,7 @@ describe('targets command', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg ?? ''));
 
     const { program } = await import('../../src/index.js');
-    program.parseAsync(['node', 'ai-install', 'targets']);
+    program.parseAsync(['node', 'cerebro', 'targets']);
 
     // Small tick to allow synchronous output to flush
     await new Promise(r => setTimeout(r, 0));
@@ -30,7 +30,7 @@ describe('targets command', () => {
   it('does not throw', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const { program } = await import('../../src/index.js');
-    await expect(program.parseAsync(['node', 'ai-install', 'targets'])).resolves.not.toThrow();
+    await expect(program.parseAsync(['node', 'cerebro', 'targets'])).resolves.not.toThrow();
     consoleSpy.mockRestore();
   });
 });

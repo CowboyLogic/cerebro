@@ -30,7 +30,7 @@ describe('install command', () => {
     vi.mocked(installComponent).mockResolvedValue({ success: true, component: match, target: 'claude-code', scope: 'workspace', installedFiles: ['/path/SKILL.md'], errors: [] });
 
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'my-skill']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'my-skill']);
 
     expect(discoverComponents).toHaveBeenCalled();
     expect(installComponent).toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe('install command', () => {
     vi.mocked(installComponent).mockResolvedValue({ success: true, component: match, target: 'vscode', scope: 'workspace', installedFiles: [], errors: [] });
 
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'my-skill', '--target', 'vscode']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'my-skill', '--target', 'vscode']);
 
     const args = (installComponent as any).mock.calls[0];
     expect(args[1]).toBe('vscode');
@@ -58,7 +58,7 @@ describe('install command', () => {
     vi.mocked(installComponent).mockResolvedValue({ success: true, component: match, target: 'claude-code', scope: 'user', installedFiles: [], errors: [] });
 
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'my-skill', '--scope', 'user']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'my-skill', '--scope', 'user']);
 
     const args = (installComponent as any).mock.calls[0];
     expect(args[2]).toBe('user');
@@ -72,7 +72,7 @@ describe('install command', () => {
     vi.mocked(installComponent).mockResolvedValue({ success: true, component: match, target: 'claude-code', scope: 'workspace', installedFiles: [], errors: [] });
 
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'my-skill', '--dry-run']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'my-skill', '--dry-run']);
 
     const args = (installComponent as any).mock.calls[0];
     expect(args[4]).toBe(true); // dryRun
@@ -84,7 +84,7 @@ describe('install command', () => {
     const p = await import('@clack/prompts');
 
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'nonexistent-component']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'nonexistent-component']);
 
     expect(p.log.error).toHaveBeenCalled();
   });
@@ -101,7 +101,7 @@ describe('install command', () => {
 
     const p = await import('@clack/prompts');
     const { program } = await import('../../src/index.js');
-    await program.parseAsync(['node', 'ai-install', 'install', 'broken-skill']);
+    await program.parseAsync(['node', 'cerebro', 'install', 'broken-skill']);
 
     // The spinner stop message should include error indication
     const spinnerMock = (p.spinner as any).mock.results[0]?.value;

@@ -56,7 +56,7 @@ export class CopilotInstaller extends BaseInstaller {
             .map(f => f.content)
             .join('\n\n');
 
-          const separator = `\n\n<!-- ${component.name} - installed by ai-artifact-installer -->\n\n`;
+          const separator = `\n\n<!-- ${component.name} - installed by cerebro -->\n\n`;
           fs.writeFileSync(filePath, existing ? existing + separator + newContent : newContent, 'utf-8');
           installedFiles.push(filePath);
         } else {

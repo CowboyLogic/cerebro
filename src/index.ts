@@ -17,7 +17,7 @@ import { runInteractive } from './ui/interactive.js';
 const program = new Command();
 
 program
-  .name('ai-install')
+  .name('cerebro')
   .description('Install AI components (skills, agents, prompts) from GitHub into your IDE')
   .version('1.0.0');
 

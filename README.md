@@ -1,4 +1,4 @@
-# AI Artifact Installer
+# Cerebro
 
 > Install AI components — skills, agents, prompts, and instructions — from GitHub repositories directly into your IDE.
 
@@ -35,7 +35,7 @@ npx tsx src/index.ts
 
 # Or install globally
 npm install -g .
-ai-install
+cerebro
 ```
 
 Set `GITHUB_TOKEN` to avoid rate limits when browsing large repositories:
@@ -53,14 +53,14 @@ export GITHUB_TOKEN=ghp_your_token_here
 ```bash
 npm start
 # or
-ai-install
+cerebro
 ```
 
 Walks you through selecting a repository, browsing components by type, choosing your target IDE, and picking a scope — all in a guided terminal UI.
 
 ```
   ╔══════════════════════════════════════════════╗
-  ║    AI Artifact Installer                    ║
+  ║    Cerebro                    ║
   ║    Install skills, agents & prompts          ║
   ║    into your favorite IDE                    ║
   ╚══════════════════════════════════════════════╝
@@ -76,39 +76,39 @@ Walks you through selecting a repository, browsing components by type, choosing 
 
 ```bash
 # Browse default repositories
-ai-install browse
+cerebro browse
 
 # Browse a specific repo
-ai-install browse anthropics/skills
+cerebro browse anthropics/skills
 
 # Filter by component type
-ai-install browse github/awesome-copilot --type agent
+cerebro browse github/awesome-copilot --type agent
 
 # Browse any public GitHub repo
-ai-install browse owner/repo
-ai-install browse https://github.com/owner/repo
+cerebro browse owner/repo
+cerebro browse https://github.com/owner/repo
 ```
 
 ### Direct Install
 
 ```bash
 # Install by name (searches default repos)
-ai-install install brand-guidelines
+cerebro install brand-guidelines
 
 # Specify repo, target IDE, and scope
-ai-install install pdf --repo anthropics/skills --target claude-code --scope user
+cerebro install pdf --repo anthropics/skills --target claude-code --scope user
 
 # Preview without writing any files
-ai-install install frontend-design --dry-run
+cerebro install frontend-design --dry-run
 
 # Install into current workspace
-ai-install install a11y --repo github/awesome-copilot --target vscode --scope workspace
+cerebro install a11y --repo github/awesome-copilot --target vscode --scope workspace
 ```
 
 ### List Supported Targets
 
 ```bash
-ai-install targets
+cerebro targets
 ```
 
 ---
@@ -174,7 +174,7 @@ ai-install targets
 ## CLI Reference
 
 ```
-Usage: ai-install [options] [command]
+Usage: cerebro [options] [command]
 
 Commands:
   interactive          Launch interactive installer UI (default)
@@ -210,8 +210,8 @@ Any public GitHub repository works. Components are auto-detected based on file p
 
 ```bash
 # Use any GitHub repo
-ai-install browse my-org/my-ai-components
-ai-install install my-skill --repo my-org/my-ai-components --target claude-code
+cerebro browse my-org/my-ai-components
+cerebro install my-skill --repo my-org/my-ai-components --target claude-code
 ```
 
 ---

@@ -75,7 +75,7 @@ export class VSCodeInstaller extends BaseInstaller {
           .map(f => f.content)
           .join('\n\n');
 
-        const separator = `\n\n<!-- ${component.name} - installed by ai-artifact-installer -->\n\n`;
+        const separator = `\n\n<!-- ${component.name} - installed by cerebro -->\n\n`;
         const final = existing ? existing + separator + newContent : newContent;
 
         fs.writeFileSync(filePath, final, 'utf-8');

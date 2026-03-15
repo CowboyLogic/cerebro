@@ -22,7 +22,7 @@ describe('browse command', () => {
     vi.mocked(discoverComponents).mockResolvedValue([]);
     const { program } = await import('../../src/index.js');
 
-    await program.parseAsync(['node', 'ai-install', 'browse']);
+    await program.parseAsync(['node', 'cerebro', 'browse']);
 
     expect(discoverComponents).toHaveBeenCalledTimes(2); // both default repos
   });
@@ -32,7 +32,7 @@ describe('browse command', () => {
     vi.mocked(discoverComponents).mockResolvedValue([]);
     const { program } = await import('../../src/index.js');
 
-    await program.parseAsync(['node', 'ai-install', 'browse', 'myorg/myrepo']);
+    await program.parseAsync(['node', 'cerebro', 'browse', 'myorg/myrepo']);
 
     expect(discoverComponents).toHaveBeenCalledTimes(1);
     const source = (discoverComponents as any).mock.calls[0][0];
@@ -51,7 +51,7 @@ describe('browse command', () => {
     const logs: string[] = [];
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg ?? ''));
 
-    await program.parseAsync(['node', 'ai-install', 'browse', 'myorg/myrepo', '--type', 'skill']);
+    await program.parseAsync(['node', 'cerebro', 'browse', 'myorg/myrepo', '--type', 'skill']);
 
     consoleSpy.mockRestore();
     // Should show skill but not agent
@@ -66,7 +66,7 @@ describe('browse command', () => {
     const p = await import('@clack/prompts');
     const { program } = await import('../../src/index.js');
 
-    await program.parseAsync(['node', 'ai-install', 'browse', 'myorg/myrepo']);
+    await program.parseAsync(['node', 'cerebro', 'browse', 'myorg/myrepo']);
 
     expect(p.log.warn).toHaveBeenCalled();
   });
@@ -77,7 +77,7 @@ describe('browse command', () => {
     const p = await import('@clack/prompts');
     const { program } = await import('../../src/index.js');
 
-    await program.parseAsync(['node', 'ai-install', 'browse', 'myorg/myrepo']);
+    await program.parseAsync(['node', 'cerebro', 'browse', 'myorg/myrepo']);
 
     // Should not throw — errors are caught and displayed
     expect(p.log.warn).not.toThrow;

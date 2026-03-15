@@ -8,9 +8,9 @@ describe('banner', () => {
     expect(result.split('\n').length).toBeGreaterThan(3);
   });
 
-  it('contains "AI Artifact Installer"', async () => {
+  it('contains "Cerebro"', async () => {
     const { banner } = await import('../../../src/utils/theme.js');
-    expect(banner()).toContain('AI Artifact Installer');
+    expect(banner()).toContain('Cerebro');
   });
 });
 

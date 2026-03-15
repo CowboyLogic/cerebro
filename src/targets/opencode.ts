@@ -40,7 +40,7 @@ export class OpenCodeInstaller extends BaseInstaller {
     // OpenCode uses similar markdown format
     // Add a header comment noting the source
     const { component } = options;
-    const header = `<!-- Installed by ai-artifact-installer from ${component.source.owner}/${component.source.repo} -->\n\n`;
+    const header = `<!-- Installed by cerebro from ${component.source.owner}/${component.source.repo} -->\n\n`;
     return header + content;
   }
 

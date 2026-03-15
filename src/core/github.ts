@@ -31,7 +31,7 @@ interface GitHubContentItem {
 function fetchJSON<T>(url: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {
-      'User-Agent': 'ai-artifact-installer/1.0',
+      'User-Agent': 'cerebro/1.0',
       'Accept': 'application/vnd.github.v3+json',
     };
     if (process.env.GITHUB_TOKEN) {
@@ -61,7 +61,7 @@ function fetchJSON<T>(url: string): Promise<T> {
 function fetchText(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {
-      'User-Agent': 'ai-artifact-installer/1.0',
+      'User-Agent': 'cerebro/1.0',
     };
     if (process.env.GITHUB_TOKEN) {
       headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;

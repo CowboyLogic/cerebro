@@ -1,10 +1,10 @@
 {
-  "name": "ai-artifact-installer",
+  "name": "cerebro",
   "version": "1.0.0",
   "description": "Install AI components (agents, skills, prompts, instructions) from GitHub into your favorite IDE",
   "type": "module",
   "bin": {
-    "ai-install": "./bin/ai-install.js"
+    "cerebro": "./bin/ai-install.js"
   },
   "scripts": {
     "start": "tsx src/index.ts",

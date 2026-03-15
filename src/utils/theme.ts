@@ -35,7 +35,7 @@ export function banner(): string {
   const lines = [
     '',
     theme.brand('  ╔══════════════════════════════════════════════╗'),
-    theme.brand('  ║') + theme.brandBold('    AI Artifact Installer                    ') + theme.brand('║'),
+    theme.brand('  ║') + theme.brandBold('    Cerebro                                  ') + theme.brand('║'),
     theme.brand('  ║') + theme.muted('    Install skills, agents & prompts          ') + theme.brand('║'),
     theme.brand('  ║') + theme.muted('    into your favorite IDE                    ') + theme.brand('║'),
     theme.brand('  ╚══════════════════════════════════════════════╝'),

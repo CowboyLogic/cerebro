@@ -55,7 +55,7 @@ describe('OpenCodeInstaller.transformContent', () => {
     const comp = makeComponent();
     const opts = makeOpts({ component: comp });
     const result = installer.transformContent('# Original', opts);
-    expect(result).toContain('<!-- Installed by ai-artifact-installer');
+    expect(result).toContain('<!-- Installed by cerebro');
     expect(result).toContain('test-owner/test-repo');
     expect(result).toContain('# Original');
   });

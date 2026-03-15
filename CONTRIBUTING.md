@@ -1,4 +1,4 @@
-# Contributing to AI Artifact Installer
+# Contributing to Cerebro
 
 Thank you for your interest in contributing. This document covers everything a developer needs to get started: project setup, architecture, testing, and the conventions used throughout the codebase.
 
@@ -16,8 +16,8 @@ Thank you for your interest in contributing. This document covers everything a d
 
 ```bash
 # Clone the repository
-git clone https://github.com/CowboyLogic/ai-installer.git
-cd ai-installer
+git clone https://github.com/CowboyLogic/cerebroer.git
+cd cerebroer
 
 # Install dependencies
 npm install
