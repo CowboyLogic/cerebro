@@ -195,33 +195,6 @@ Options for install:
 
 ---
 
-## Architecture
-
-```
-src/
-├── index.ts              CLI entry point (commander)
-├── ui/
-│   └── interactive.ts    Interactive TUI (@clack/prompts)
-├── core/
-│   ├── types.ts          Shared types and constants
-│   ├── github.ts         GitHub API — tree, contents, raw file fetching
-│   ├── registry.ts       Component discovery from repo file tree
-│   └── installer.ts      Install orchestrator
-├── targets/
-│   ├── base.ts           Abstract BaseInstaller
-│   ├── claude-code.ts    Claude Code installer
-│   ├── opencode.ts       OpenCode installer
-│   ├── vscode.ts         VS Code installer
-│   ├── copilot.ts        Copilot CLI installer
-│   └── index.ts          Installer registry
-└── utils/
-    ├── platform.ts       OS detection and config paths
-    ├── paths.ts          IDE path resolution, workspace root finder
-    └── theme.ts          Terminal colors, icons, and layout helpers
-```
-
----
-
 ## Adding a Custom Repository
 
 Any public GitHub repository works. Components are auto-detected based on file patterns:
@@ -240,6 +213,12 @@ Any public GitHub repository works. Components are auto-detected based on file p
 ai-install browse my-org/my-ai-components
 ai-install install my-skill --repo my-org/my-ai-components --target claude-code
 ```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for project setup, architecture, testing conventions, and how to add new IDE targets.
 
 ---
 
