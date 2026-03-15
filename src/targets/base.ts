@@ -12,6 +12,19 @@ export abstract class BaseInstaller {
 
   abstract getTargetFileName(sourceFile: string, options: InstallOptions): string;
 
+  /**
+   * Throws if targetPath escapes the installDir. Prevents path traversal attacks
+   * where malicious component names like '../../.ssh/authorized_keys' could write
+   * outside the intended install directory.
+   */
+  protected static assertConfined(installDir: string, targetPath: string): void {
+    const base = path.resolve(installDir);
+    const resolved = path.resolve(targetPath);
+    if (resolved !== base && !resolved.startsWith(base + path.sep)) {
+      throw new Error(`Security: path "${resolved}" escapes install directory "${base}"`);
+    }
+  }
+
   async install(options: InstallOptions): Promise<InstallResult> {
     const { component, target, scope, dryRun } = options;
     const installDir = this.getInstallDir(options);
@@ -31,6 +44,7 @@ export abstract class BaseInstaller {
 
         const targetName = this.getTargetFileName(file.name, options);
         const targetPath = path.join(installDir, targetName);
+        BaseInstaller.assertConfined(installDir, targetPath);
         const content = this.transformContent(file.content, options);
 
         if (dryRun) {

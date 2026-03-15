@@ -146,6 +146,19 @@ export async function getFileContents(source: RepoSource, filePaths: string[]): 
   return results;
 }
 
+// GitHub identifier validation patterns
+const OWNER_RE = /^[a-zA-Z0-9][a-zA-Z0-9\-]{0,38}$/;
+const REPO_RE = /^[a-zA-Z0-9][a-zA-Z0-9\-_.]{0,99}$/;
+
+function validateGitHubIdentifiers(owner: string, repo: string, input: string): void {
+  if (!OWNER_RE.test(owner)) {
+    throw new Error(`Invalid GitHub owner "${owner}" in "${input}". Must be 1-39 alphanumeric characters or hyphens.`);
+  }
+  if (!REPO_RE.test(repo)) {
+    throw new Error(`Invalid GitHub repository name "${repo}" in "${input}". Must be 1-100 alphanumeric characters, hyphens, underscores, or dots.`);
+  }
+}
+
 export function parseRepoUrl(input: string): RepoSource {
   // Handle: owner/repo, https://github.com/owner/repo, github.com/owner/repo
   const cleaned = input
@@ -159,9 +172,13 @@ export function parseRepoUrl(input: string): RepoSource {
     throw new Error(`Invalid repository format: "${input}". Use owner/repo or a GitHub URL.`);
   }
 
+  const owner = parts[0];
+  const repo = parts[1];
+  validateGitHubIdentifiers(owner, repo, input);
+
   return {
-    owner: parts[0],
-    repo: parts[1],
+    owner,
+    repo,
     path: parts.length > 2 ? parts.slice(2).join('/') : undefined,
   };
 }

@@ -46,6 +46,7 @@ export class CopilotInstaller extends BaseInstaller {
       if (component.type === 'instruction' || component.type === 'prompt') {
         // Append to copilot-instructions.md
         const filePath = path.join(installDir, 'copilot-instructions.md');
+        BaseInstaller.assertConfined(installDir, filePath);
         if (!dryRun) {
           let existing = '';
           try { existing = fs.readFileSync(filePath, 'utf-8'); } catch { /* new */ }
@@ -67,6 +68,7 @@ export class CopilotInstaller extends BaseInstaller {
           if (!file.content) { errors.push(`No content for ${file.name}`); continue; }
           const targetName = this.getTargetFileName(file.name, options);
           const targetPath = path.join(installDir, targetName);
+          BaseInstaller.assertConfined(installDir, targetPath);
           if (!dryRun) {
             ensureDir(path.dirname(targetPath));
             fs.writeFileSync(targetPath, this.transformContent(file.content, options), 'utf-8');

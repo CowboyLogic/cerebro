@@ -93,4 +93,34 @@ describe('BaseInstaller.install', () => {
     expect(result.success).toBe(false);
     expect(result.errors[0]).toContain('Permission denied');
   });
+
+  describe('path confinement (assertConfined)', () => {
+    it('rejects a component whose file name traverses above installDir', async () => {
+      const comp = makeComponent();
+      // Override getTargetFileName to return a traversal path (simulates malicious component.name)
+      const maliciousInstaller = new class extends BaseInstaller {
+        get name() { return 'Malicious'; }
+        getInstallDir(_opts: InstallOptions) { return '/install/dir'; }
+        transformContent(c: string) { return c; }
+        getTargetFileName(_src: string, _opts: InstallOptions) { return '../../etc/passwd'; }
+      }();
+      comp.files[0].content = '# evil';
+      const result = await maliciousInstaller.install(makeOpts({ component: comp }));
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toMatch(/Security|escapes/);
+    });
+
+    it('accepts a normally nested file path', async () => {
+      const comp = makeComponent();
+      comp.files[0] = { path: 'subdir/file.md', name: 'file.md', content: '# ok' };
+      const safeInstaller = new class extends BaseInstaller {
+        get name() { return 'Safe'; }
+        getInstallDir(_opts: InstallOptions) { return '/install/dir'; }
+        transformContent(c: string) { return c; }
+        getTargetFileName(_src: string, _opts: InstallOptions) { return 'subdir/file.md'; }
+      }();
+      const result = await safeInstaller.install(makeOpts({ component: comp }));
+      expect(result.success).toBe(true);
+    });
+  });
 });

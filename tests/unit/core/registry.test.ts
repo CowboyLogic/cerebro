@@ -126,4 +126,38 @@ describe('discoverComponents', () => {
     expect(inst).toBeTruthy();
     expect(inst?.compatibleTargets).toContain('copilot');
   });
+
+  describe('name sanitization', () => {
+    it('strips path traversal sequences from component directory names', async () => {
+      const tree = makeTreeResponse([
+        { path: '../../.ssh/SKILL.md', type: 'blob', size: 100 },
+      ]);
+      seedResponse(TREE_URL, 200, JSON.stringify(tree));
+      seedResponse(RAW_URL, 500, 'not found'); // enrichment not needed
+
+      const { discoverComponents } = await import('../../../src/core/registry.js');
+      const components = await discoverComponents(makeSource());
+      // If any component was discovered, its name must not contain '..' or path separators
+      for (const c of components) {
+        expect(c.name).not.toContain('..');
+        expect(c.name).not.toContain('/');
+        expect(c.name).not.toContain('\\');
+      }
+    });
+
+    it('strips path traversal from standalone file names', async () => {
+      const tree = makeTreeResponse([
+        { path: 'agents/../../../etc/passwd.md', type: 'blob', size: 100 },
+      ]);
+      seedResponse(TREE_URL, 200, JSON.stringify(tree));
+      seedResponse(RAW_URL, 500, 'not found');
+
+      const { discoverComponents } = await import('../../../src/core/registry.js');
+      const components = await discoverComponents(makeSource());
+      for (const c of components) {
+        expect(c.name).not.toContain('..');
+        expect(c.name).not.toContain('/');
+      }
+    });
+  });
 });

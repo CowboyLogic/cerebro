@@ -96,7 +96,7 @@ export async function discoverComponents(source: RepoSource): Promise<Component[
 
       const type = inferTypeFromDir(topDir);
       components.push({
-        name: path.basename(item.path, ext),
+        name: sanitizeName(path.basename(item.path, ext)),
         type,
         description: `${capitalize(type)} - ${path.basename(item.path)}`,
         path: item.path,
@@ -165,14 +165,26 @@ function extractTags(content: string): string[] {
   return [];
 }
 
+/** Strip path traversal sequences and unsafe characters from a component name derived from repo paths. */
+function sanitizeName(raw: string): string {
+  const name = path.basename(raw)       // take only the last segment
+    .replace(/\.\./g, '')               // remove any remaining '..'
+    .replace(/[/\\]/g, '')              // strip path separators
+    .replace(/[^\w\-_.]/g, '-')         // replace non-safe chars with hyphen
+    .replace(/^[.\-]+/, '')             // no leading dot or hyphen
+    .slice(0, 100);                     // cap length
+  return name || 'unknown';
+}
+
 function deriveComponentName(filePath: string, type: ComponentType): string {
   const parts = filePath.split('/');
   // Use parent directory name if file is a known marker
   const fileName = parts[parts.length - 1];
   if (['SKILL.md', 'CLAUDE.md', 'agent.yaml', 'agent.yml', 'agent.md'].includes(fileName)) {
-    return parts.length > 1 ? parts[parts.length - 2] : fileName;
+    const raw = parts.length > 1 ? parts[parts.length - 2] : fileName;
+    return sanitizeName(raw);
   }
-  return path.basename(fileName, path.extname(fileName));
+  return sanitizeName(path.basename(fileName, path.extname(fileName)));
 }
 
 function inferTypeFromDir(dir: string): ComponentType {

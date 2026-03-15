@@ -60,6 +60,46 @@ describe('parseRepoUrl', () => {
     const { parseRepoUrl } = await import('../../../src/core/github.js');
     expect(() => parseRepoUrl('')).toThrow();
   });
+
+  it('throws on owner with path traversal sequences', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    expect(() => parseRepoUrl('../evil/repo')).toThrow(/Invalid GitHub owner/);
+  });
+
+  it('throws on owner with spaces', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    expect(() => parseRepoUrl('my org/repo')).toThrow();
+  });
+
+  it('throws on owner exceeding 39 characters', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    const longOwner = 'a'.repeat(40);
+    expect(() => parseRepoUrl(`${longOwner}/repo`)).toThrow(/Invalid GitHub owner/);
+  });
+
+  it('throws on repo with path traversal sequences', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    expect(() => parseRepoUrl('owner/../etc')).toThrow(/Invalid GitHub/);
+  });
+
+  it('throws on repo name exceeding 100 characters', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    const longRepo = 'a'.repeat(101);
+    expect(() => parseRepoUrl(`owner/${longRepo}`)).toThrow(/Invalid GitHub repository/);
+  });
+
+  it('accepts valid owner with hyphens', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    const result = parseRepoUrl('my-org/my-repo');
+    expect(result.owner).toBe('my-org');
+    expect(result.repo).toBe('my-repo');
+  });
+
+  it('accepts repo with underscores and dots', async () => {
+    const { parseRepoUrl } = await import('../../../src/core/github.js');
+    const result = parseRepoUrl('owner/my_repo.v2');
+    expect(result.repo).toBe('my_repo.v2');
+  });
 });
 
 describe('getRepoTree', () => {
