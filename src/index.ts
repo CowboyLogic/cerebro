@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
 import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import chalk from 'chalk';
@@ -189,10 +187,9 @@ program
     }
   });
 
-// Only auto-parse when executed directly (not when imported in tests).
-// resolve() normalizes both paths to absolute form so the comparison works
-// on Windows where tsx may pass a relative path in process.argv[1].
-if (resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+// Skip auto-parse when running under Vitest — tests import this module and
+// call program.parseAsync() manually with their own mock arguments.
+if (!process.env.VITEST) {
   program.parseAsync().catch((err) => {
     console.error(err);
     process.exit(1);
