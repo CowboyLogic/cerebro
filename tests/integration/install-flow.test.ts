@@ -9,14 +9,10 @@ vi.mock('node:fs', async () => {
   return { default: fs, ...fs };
 });
 
-vi.mock('../../../src/utils/paths.js', async (importOriginal) => {
+vi.mock('../../src/utils/paths.js', async (importOriginal) => {
   const original = await importOriginal<typeof import('../../src/utils/paths.js')>();
   return {
     ...original,
-    ensureDir: vi.fn(async (dirPath: string) => {
-      const { fs } = await import('memfs');
-      fs.mkdirSync(dirPath, { recursive: true });
-    }),
     findWorkspaceRoot: vi.fn(() => null),
   };
 });

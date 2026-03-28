@@ -26,15 +26,27 @@ vi.mock('../../../src/utils/logger.js', () => ({
 // ── node:readline mock ────────────────────────────────────────────────────────
 // plainLineInput() uses readline.createInterface directly (cooked-mode, avoids
 // raw-mode conflicts). We intercept it so promptResponses drives it like the
-// @inquirer mocks: string → resolve, CANCEL → emit SIGINT → return BACK.
+// @inquirer mocks: string -> resolve, CANCEL -> emit SIGINT -> return BACK,
+// and FORCE_CLOSE -> emit close without an answer -> return BACK.
 
 vi.mock('node:readline', () => ({
   default: {
     createInterface: vi.fn(() => {
+      const closeHandlers: Array<() => void> = [];
       const mockRl = {
-        once: vi.fn(),
+        once: vi.fn((event: string, cb: () => void) => {
+          if (event === 'close') closeHandlers.push(cb);
+          return mockRl;
+        }),
         on: vi.fn(),
-        close: vi.fn(),
+        removeAllListeners: vi.fn((event?: string) => {
+          if (!event || event === 'close') closeHandlers.length = 0;
+          return mockRl;
+        }),
+        close: vi.fn(() => {
+          for (const handler of [...closeHandlers]) handler();
+          return mockRl;
+        }),
         question: vi.fn((msg: string, cb: (s: string) => void) => {
           readlineCalls.push({ msg });
           const resp = nextResponse();
@@ -42,6 +54,9 @@ vi.mock('node:readline', () => ({
             // Emit SIGINT after the promise-construction tick so the handler
             // registered inside plainLineInput is already in place.
             setImmediate(() => process.emit('SIGINT' as NodeJS.Signals));
+          } else if (resp === FORCE_CLOSE) {
+            // Simulate tty closing unexpectedly without invoking question cb.
+            setImmediate(() => mockRl.close());
           } else {
             setImmediate(() => cb(String(resp ?? '')));
           }
@@ -57,6 +72,7 @@ vi.mock('node:readline', () => ({
 
 /** Sentinel returned in promptResponses to simulate Ctrl+C on a prompt. */
 const CANCEL = Symbol('cancel');
+const FORCE_CLOSE = Symbol('force-close');
 
 const inquirerCalls: { fn: string; args: unknown[] }[] = [];
 let promptResponses: unknown[] = [];
@@ -174,6 +190,24 @@ function makeLargeComponents(n = 51): Component[] {
       compatibleTargets: ['claude-code'] as TargetIDE[],
     })
   );
+}
+
+function makeLargeMixedComponents(): Component[] {
+  const agents = Array.from({ length: 30 }, (_, i) =>
+    makeComponent({
+      name: `agent-${String(i).padStart(3, '0')}`,
+      type: 'agent',
+      compatibleTargets: ['claude-code'] as TargetIDE[],
+    })
+  );
+  const skills = Array.from({ length: 21 }, (_, i) =>
+    makeComponent({
+      name: `skill-${String(i).padStart(3, '0')}`,
+      type: 'skill',
+      compatibleTargets: ['claude-code'] as TargetIDE[],
+    })
+  );
+  return [...agents, ...skills];
 }
 
 // Standard complete-flow responses: repo → components → ide → scope → confirm → continue(exit)
@@ -362,6 +396,140 @@ describe('interactive wizard', () => {
 
     expect(readlineCalls.length).toBe(0);
     expect(inquirerCalls.find(c => c.fn === 'checkbox')).toBeTruthy();
+  });
+
+  it('shows numbered type filter input when list is > RENDER_MAX and has multiple types', async () => {
+    const components = makeLargeMixedComponents();
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = [
+      'awesome-copilot',
+      '0',
+      '',
+      [components[0]],
+      'claude-code', 'user', true, 'exit',
+    ];
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    expect(readlineCalls.some(c => c.msg.includes('Enter number (0-2'))).toBe(true);
+  });
+
+  it('skips type filter input when total components are ≤ RENDER_MAX', async () => {
+    const components = makeComponents();
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = fullFlowResponses(components);
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    const typeFilterInputs = readlineCalls.filter(c => c.msg.includes('Enter number (0-'));
+    expect(typeFilterInputs.length).toBe(0);
+  });
+
+  it('skips type filter input when > RENDER_MAX but only one type is present', async () => {
+    const components = makeLargeComponents();
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = [
+      'awesome-copilot',
+      'comp-000',
+      [components[0]],
+      'claude-code', 'user', true, 'exit',
+    ];
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    const typeFilterInputs = readlineCalls.filter(c => c.msg.includes('Enter number (0-'));
+    expect(typeFilterInputs.length).toBe(0);
+  });
+
+  it('after selecting a specific type, only that type appears in checkbox choices', async () => {
+    const components = makeLargeMixedComponents();
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = [
+      'awesome-copilot',
+      '2',
+      [components[30]],
+      'claude-code', 'user', true, 'exit',
+    ];
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    const checkboxCall = inquirerCalls.find(c => c.fn === 'checkbox');
+    expect(checkboxCall).toBeTruthy();
+
+    const opts = checkboxCall!.args[0] as { choices: Array<{ separator?: string; value?: Component }> };
+    const enabledOptions = opts.choices.filter(c => !('separator' in c));
+    expect(enabledOptions.length).toBe(21);
+    expect(enabledOptions.every(c => (c.value as Component).type === 'skill')).toBe(true);
+  });
+
+  it('unexpected close on type filter input returns BACK to repo step', async () => {
+    const components = makeLargeMixedComponents();
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = [
+      'awesome-copilot',
+      FORCE_CLOSE,
+      'awesome-copilot',
+      '0',
+      '',
+      [components[0]],
+      'claude-code', 'user', true, 'exit',
+    ];
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    const typeFilterInputs = readlineCalls.filter(c => c.msg.includes('Enter number (0-2'));
+    expect(typeFilterInputs.length).toBe(2);
+    expect(vi.mocked(discoverComponents)).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows text search after type filter when filtered results still exceed RENDER_MAX', async () => {
+    const components = [
+      ...Array.from({ length: 55 }, (_, i) =>
+        makeComponent({
+          name: `agent-over-${String(i).padStart(3, '0')}`,
+          type: 'agent',
+          compatibleTargets: ['claude-code'] as TargetIDE[],
+        })
+      ),
+      ...Array.from({ length: 5 }, (_, i) =>
+        makeComponent({
+          name: `skill-over-${String(i).padStart(3, '0')}`,
+          type: 'skill',
+          compatibleTargets: ['claude-code'] as TargetIDE[],
+        })
+      ),
+    ];
+    const { discoverComponents } = await import('../../../src/core/registry.js');
+    vi.mocked(discoverComponents).mockResolvedValue(components);
+
+    promptResponses = [
+      'awesome-copilot',
+      '1',
+      '',
+      [components[0]],
+      'claude-code', 'user', true, 'exit',
+    ];
+
+    const { runInteractive } = await import('../../../src/ui/interactive.js');
+    await runInteractive();
+
+    expect(readlineCalls.length).toBe(2);
+    expect(readlineCalls[1].msg).toContain('55 available');
   });
 
   it('large list pre-filter: valid query narrows options before checkbox', async () => {

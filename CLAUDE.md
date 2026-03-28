@@ -8,11 +8,9 @@ Cerebro is a cross-platform CLI tool that discovers and installs AI components (
 
 ## Commands
 
-All commands must be run from the `cerebro-cli/` directory:
+All commands must be run from the project root:
 
 ```bash
-cd cerebro-cli
-
 npm start              # Run interactive mode (tsx src/index.ts)
 npm run dev            # Watch mode
 npm run build          # Compile TypeScript to dist/
@@ -33,19 +31,19 @@ Run a single test file: `npx vitest run tests/unit/core/registry.test.ts`
 
 Three core pipelines:
 
-1. **Discovery** (`cerebro-cli/src/core/registry.ts`): Loads `cerebro.json` manifest from repo root. Falls back to heuristic tree-walking (directory markers like `SKILL.md`, `agent.yaml`, or flat collections in `skills/`, `agents/`, etc.).
+1. **Discovery** (`src/core/registry.ts`): Loads `cerebro.json` manifest from repo root. Falls back to heuristic tree-walking (directory markers like `SKILL.md`, `agent.yaml`, or flat collections in `skills/`, `agents/`, etc.).
 
-2. **Installation** (`cerebro-cli/src/core/installer.ts`): Orchestrates fetching file contents from GitHub and delegates to the appropriate target installer.
+2. **Installation** (`src/core/installer.ts`): Orchestrates fetching file contents from GitHub and delegates to the appropriate target installer.
 
-3. **Target installers** (`cerebro-cli/src/targets/*.ts`): Each IDE target extends `BaseInstaller` which enforces path confinement via `assertConfined()`. Targets handle IDE-specific file placement, naming, and content transformation (e.g., VS Code appends to `copilot-instructions.md`, Claude Code writes to `skills/<name>/`).
+3. **Target installers** (`src/targets/*.ts`): Each IDE target extends `BaseInstaller` which enforces path confinement via `assertConfined()`. Targets handle IDE-specific file placement, naming, and content transformation (e.g., VS Code appends to `copilot-instructions.md`, Claude Code writes to `skills/<name>/`).
 
-The interactive wizard (`cerebro-cli/src/ui/interactive.ts`) is a 5-step state machine: repo selection → component discovery → IDE target → scope (user/workspace) → confirm & install.
+The interactive wizard (`src/ui/interactive.ts`) is a 5-step state machine: repo selection → component discovery → IDE target → scope (user/workspace) → confirm & install.
 
 ## Security — Three Non-Negotiable Layers
 
-1. **Input validation** (`cerebro-cli/src/core/github.ts` → `validateGitHubIdentifiers()`): Regex-checks owner/repo before any network call.
-2. **Name sanitization** (`cerebro-cli/src/core/registry.ts` → `sanitizeName()`): Strips `..`, path separators, non-printable chars from component names.
-3. **Path confinement** (`cerebro-cli/src/targets/base.ts` → `assertConfined()`): `path.resolve()` on every write target; throws if it escapes the install directory.
+1. **Input validation** (`src/core/github.ts` → `validateGitHubIdentifiers()`): Regex-checks owner/repo before any network call.
+2. **Name sanitization** (`src/core/registry.ts` → `sanitizeName()`): Strips `..`, path separators, non-printable chars from component names.
+3. **Path confinement** (`src/targets/base.ts` → `assertConfined()`): `path.resolve()` on every write target; throws if it escapes the install directory.
 
 Any new code that writes files, calls external APIs, or processes remote input must follow this pattern.
 
@@ -54,19 +52,19 @@ Any new code that writes files, calls external APIs, or processes remote input m
 - **Node.js imports** use `node:` prefix: `import fs from 'node:fs'`
 - **ESM extensions** required on all imports: `import { foo } from './bar.js'`
 - **`const enum` is banned** — tsx/esbuild doesn't inline them. Use `const obj = { ... } as const`
-- **Entry-point guard**: `if (!process.env.VITEST)` gates `program.parseAsync()` in `cerebro-cli/src/index.ts`
+- **Entry-point guard**: `if (!process.env.VITEST)` gates `program.parseAsync()` in `src/index.ts`
 - **New IDE targets** must extend `BaseInstaller` and call `assertConfined()` before every `writeFileSync`
-- **Platform paths**: Use `getUserConfigDir()` from `cerebro-cli/src/utils/platform.ts` for cross-platform config directories
+- **Platform paths**: Use `getUserConfigDir()` from `src/utils/platform.ts` for cross-platform config directories
 
 ## Test Conventions
 
 - Mock `node:fs` and platform utilities via `vi.mock(...)` at the top of each test file
-- Use `makeComponent()` from `cerebro-cli/tests/__fixtures__/tree-responses.ts` for test data
+- Use `makeComponent()` from `tests/__fixtures__/tree-responses.ts` for test data
 - Integration tests use `memfs` for in-memory file I/O
 - Do not mock the GitHub API in integration tests — use fixtures or recorded responses
-- Coverage excludes `cerebro-cli/src/index.ts` and `cerebro-cli/src/ui/interactive.ts`
+- Coverage excludes `src/index.ts` and `src/ui/interactive.ts`
 
-## Key Types (cerebro-cli/src/core/types.ts)
+## Key Types (src/core/types.ts)
 
 - `ComponentType`: `'skill' | 'agent' | 'prompt' | 'instruction' | 'snippet' | 'workflow' | 'unknown'`
 - `TargetIDE`: `'claude-code' | 'opencode' | 'vscode' | 'copilot'`

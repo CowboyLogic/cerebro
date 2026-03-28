@@ -15,16 +15,6 @@ import { logger } from '../utils/logger.js';
 
 const BACK = Symbol('back');
 
-const TYPE_ICONS: Record<string, string> = {
-  skill:       '🎯',
-  agent:       '🤖',
-  prompt:      '💬',
-  instruction: '📋',
-  snippet:     '✂️',
-  workflow:    '🔄',
-  unknown:     '📄',
-};
-
 const IDE_TYPE_HINTS: Record<TargetIDE, string> = {
   'claude-code': 'skills · agents · prompts · instructions',
   'opencode':    'agents · instructions · prompts',
@@ -334,7 +324,7 @@ async function fetchComponents(source: RepoSource): Promise<Component[] | null> 
 
   const summary = Object.entries(typeCounts)
     .sort(([, a], [, b]) => b - a)
-    .map(([type, count]) => `${TYPE_ICONS[type] || '📄'} ${theme.bold(String(count))} ${theme.muted(type + (count > 1 ? 's' : ''))}`)
+    .map(([type, count]) => `${getTypeIcon(type)} ${theme.bold(String(count))} ${theme.muted(type + (count > 1 ? 's' : ''))}`)
     .join('  ');
   console.log('  ' + summary);
 
@@ -367,6 +357,7 @@ async function plainLineInput(message: string): Promise<string | typeof BACK> {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.once('close', () => done(BACK));
     rl.question(message, (answer) => {
+      rl.removeAllListeners('close');
       rl.close();
       done(answer.trim());
     });
@@ -395,46 +386,91 @@ async function promptComponents(components: Component[]) {
     } else {
       logger.debug(`promptComponents pre-filter required  total=${components.length}  max=${RENDER_MAX}`);
 
-      // Inner loop: re-prompt only when the query matches nothing at all.
-      while (true) {
-        const message =
-          `  ${stepBadge(2, TOTAL_STEPS)} Search ` +
-          theme.muted(`(${components.length} available · Enter to browse first ${RENDER_MAX} · Ctrl+C to go back)`) +
-          ': ';
-        const filterResult = await plainLineInput(message);
-        logger.debug(`prompt:components-prefilter ${filterResult === BACK ? 'cancelled' : 'answered'}`);
+      // Step A: if multiple types exist, allow narrowing by type first.
+      const typeCounts = components.reduce((acc, c) => {
+        acc[c.type] = (acc[c.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
-        if (filterResult === BACK) return BACK;
+      const presentTypes = [
+        ...TYPE_ORDER.filter(t => typeCounts[t]),
+        ...Object.keys(typeCounts).filter(t => !TYPE_ORDER.includes(t)).sort((a, b) => a.localeCompare(b)),
+      ];
 
-        const query = (filterResult as string).slice(0, 200);
-        logger.debug(`promptComponents pre-filter query  length=${query.length}`);
+      let typeFilteredComponents = components;
+      if (presentTypes.length > 1) {
+        console.log('');
+        console.log(`  ${theme.brand('Filter by component type:')}`);
+        console.log(`  ${theme.muted('0)')} ${theme.white('All Types')} ${theme.muted(`(${components.length})`)}`);
+        presentTypes.forEach((t, i) => {
+          console.log(`  ${theme.muted(`${i + 1})`)} ${getTypeIcon(t)} ${theme.white(capitalize(t) + 's')} ${theme.muted(`(${typeCounts[t]})`)}`);
+        });
+        console.log('');
 
-        if (query === '') {
-          filteredComponents = components.slice(0, RENDER_MAX);
-          logger.debug(`promptComponents pre-filter  empty query  using first ${RENDER_MAX}`);
+        let selectedType: string = 'all';
+        while (true) {
+          const result = await plainLineInput(`  Enter number (0-${presentTypes.length}, Ctrl+C to go back): `);
+          if (result === BACK) return BACK;
+          const n = parseInt((result as string).trim(), 10);
+          if (!isNaN(n) && n >= 0 && n <= presentTypes.length) {
+            selectedType = n === 0 ? 'all' : presentTypes[n - 1];
+            break;
+          }
+          console.log(theme.muted(`  Please enter a number between 0 and ${presentTypes.length}`));
+        }
+
+        if (selectedType !== 'all') {
+          typeFilteredComponents = components.filter(c => c.type === selectedType);
+        }
+
+        logger.debug(`promptComponents type filter selected  type=${selectedType}  remaining=${typeFilteredComponents.length}`);
+      }
+
+      // Step B: keep existing search logic when we still exceed render cap.
+      if (typeFilteredComponents.length <= RENDER_MAX) {
+        filteredComponents = typeFilteredComponents;
+      } else {
+        // Inner loop: re-prompt only when the query matches nothing at all.
+        while (true) {
+          const message =
+            `  ${stepBadge(2, TOTAL_STEPS)} Search ` +
+            theme.muted(`(${typeFilteredComponents.length} available · Enter to browse first ${RENDER_MAX} · Ctrl+C to go back)`) +
+            ': ';
+          const filterResult = await plainLineInput(message);
+          logger.debug(`prompt:components-prefilter ${filterResult === BACK ? 'cancelled' : 'answered'}`);
+
+          if (filterResult === BACK) return BACK;
+
+          const query = (filterResult as string).slice(0, 200);
+          logger.debug(`promptComponents pre-filter query  length=${query.length}`);
+
+          if (query === '') {
+            filteredComponents = typeFilteredComponents.slice(0, RENDER_MAX);
+            logger.debug(`promptComponents pre-filter  empty query  using first ${RENDER_MAX}`);
+            break;
+          }
+
+          const matches = typeFilteredComponents.filter(c =>
+            c.name.toLowerCase().includes(query.toLowerCase()) ||
+            (c.description ?? '').toLowerCase().includes(query.toLowerCase())
+          );
+
+          if (matches.length === 0) {
+            console.log(theme.warning('  No components match — try a different search term'));
+            logger.debug('promptComponents pre-filter  zero matches  re-prompting');
+            continue;
+          }
+
+          if (matches.length > RENDER_MAX) {
+            console.log(theme.muted(`  ${matches.length} results — showing first ${RENDER_MAX}. Ctrl+C after the list to refine your search.`));
+            filteredComponents = matches.slice(0, RENDER_MAX);
+            logger.debug(`promptComponents pre-filter  too many matches=${matches.length}  capped at ${RENDER_MAX}`);
+          } else {
+            filteredComponents = matches;
+            logger.debug(`promptComponents pre-filter  matched=${filteredComponents.length}`);
+          }
           break;
         }
-
-        const matches = components.filter(c =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          (c.description ?? '').toLowerCase().includes(query.toLowerCase())
-        );
-
-        if (matches.length === 0) {
-          console.log(theme.warning('  No components match — try a different search term'));
-          logger.debug('promptComponents pre-filter  zero matches  re-prompting');
-          continue;
-        }
-
-        if (matches.length > RENDER_MAX) {
-          console.log(theme.muted(`  ${matches.length} results — showing first ${RENDER_MAX}. Ctrl+C after the list to refine your search.`));
-          filteredComponents = matches.slice(0, RENDER_MAX);
-          logger.debug(`promptComponents pre-filter  too many matches=${matches.length}  capped at ${RENDER_MAX}`);
-        } else {
-          filteredComponents = matches;
-          logger.debug(`promptComponents pre-filter  matched=${filteredComponents.length}`);
-        }
-        break;
       }
     }
 
@@ -455,7 +491,7 @@ async function promptComponents(components: Component[]) {
     const choices: Choice[] = [];
     for (const type of orderedTypes) {
       const items = grouped.get(type)!;
-      choices.push(new Separator(`${TYPE_ICONS[type] || '📄'} ${theme.brandBold(capitalize(type) + 's')} (${items.length})`));
+      choices.push(new Separator(`${getTypeIcon(type)} ${theme.brandBold(capitalize(type) + 's')} (${items.length})`));
       for (const c of items) {
         const tags = c.tags?.slice(0, 3).map(t => tagLabel(t)).join(' ') ?? '';
         const fileCount = c.files.length > 0 ? theme.muted(`${c.files.length} file${c.files.length > 1 ? 's' : ''}`) : '';
@@ -667,6 +703,14 @@ function getIDEIcon(ide: TargetIDE): string {
     'claude-code': '🧠', 'opencode': '💻', 'vscode': '🔷', 'copilot': '🤖',
   };
   return map[ide];
+}
+
+function getTypeIcon(type: string): string {
+  const icons: Record<string, string> = {
+    skill: '🎯', agent: '🤖', prompt: '💬',
+    instruction: '📋', snippet: '✂️', workflow: '🔄', unknown: '📄',
+  };
+  return icons[type] ?? '📄';
 }
 
 function truncate(s: string, max: number): string {

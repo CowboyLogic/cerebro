@@ -142,22 +142,22 @@ describe('getRepoTree', () => {
   });
 
   it('includes Authorization header when GITHUB_TOKEN is set', async () => {
-    // Ensure GITHUB_TOKEN is set (use existing env var or set a test value)
-    const token = process.env.GITHUB_TOKEN ?? 'test-token-123';
-    vi.stubEnv('GITHUB_TOKEN', token);
-    const https = await import('node:https');
-    const getSpy = vi.spyOn(https, 'get' as any);
+    // Set GITHUB_TOKEN directly — setup.ts afterEach restores process.env
+    process.env.GITHUB_TOKEN = 'test-token-123';
     const tree = makeTreeResponse([]);
     seedResponse('api.github.com', 200, JSON.stringify(tree));
+    const https = await import('node:https');
+    const getSpy = vi.spyOn(https.default as any, 'get');
+    getSpy.mockClear(); // clear accumulated calls from earlier tests in this file
     const { getRepoTree } = await import('../../../src/core/github.js');
     try { await getRepoTree({ owner: 'owner', repo: 'repo' }); } catch { /* ignore */ }
+    expect(getSpy.mock.calls.length).toBeGreaterThan(0);
     const callArgs = getSpy.mock.calls[0];
-    if (callArgs && callArgs[1] && typeof callArgs[1] === 'object') {
-      // Verify that the Authorization header is present and has the 'token ...' format
-      const auth = (callArgs[1] as any).headers?.Authorization as string | undefined;
-      expect(auth).toBeTruthy();
-      expect(auth).toMatch(/^token\s+\S+/);
-    }
+    expect(callArgs[1]).toBeDefined();
+    // Verify that the Authorization header is present and has the 'token ...' format
+    const auth = (callArgs[1] as any).headers?.Authorization as string | undefined;
+    expect(auth).toBeTruthy();
+    expect(auth).toMatch(/^token\s+\S+/);
   });
 });
 
