@@ -30,6 +30,7 @@ Suite-level ADRs (`S-`) live here because the CLI repo is the authoritative docu
 | [S-0003](S-0003-installer-follows-catalog-targets.md) | Installer follows catalog-declared target paths | Accepted |
 | [S-0004](S-0004-catalog-first-heuristic-fallback-discovery.md) | Catalog-first discovery with heuristic fallback | Accepted |
 | [S-0005](S-0005-cli-as-documentation-home.md) | CLI as suite documentation home | Accepted |
+| [S-0006](S-0006-design-first-development-process.md) | Design-first development process | Accepted |
 
 ### CLI-specific (CLI-series)
 
