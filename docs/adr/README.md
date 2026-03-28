@@ -31,6 +31,8 @@ Suite-level ADRs (`S-`) live here because the CLI repo is the authoritative docu
 | [S-0004](S-0004-catalog-first-heuristic-fallback-discovery.md) | Catalog-first discovery with heuristic fallback | Accepted |
 | [S-0005](S-0005-cli-as-documentation-home.md) | CLI as suite documentation home | Accepted |
 | [S-0006](S-0006-design-first-development-process.md) | Design-first development process | Accepted |
+| [S-0007](S-0007-schema-versioning-strategy.md) | Schema versioning strategy | Accepted |
+| [S-0008](S-0008-developer-workflow.md) | Developer workflow | Accepted |
 
 ### CLI-specific (CLI-series)
 

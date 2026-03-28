@@ -1,197 +1,169 @@
 # Contributing to Cerebro
 
-Thank you for your interest in contributing. This document covers everything a developer needs to get started: project setup, architecture, testing, and the conventions used throughout the codebase.
+Welcome. Cerebro is a suite of tools that makes AI artifact discovery and installation consistent across IDE ecosystems. Before contributing to any repo in the suite, read this document — it covers the full development workflow, repository relationships, and the decisions that govern all products.
+
+> **Suite documentation home:** This repository (`cerebro`) is the authoritative source for suite-level design documents and architecture decisions. All other repos link back here.
+
+---
+
+## Repository map
+
+| Repo | Role | Status |
+|------|------|--------|
+| [`cerebro`](https://github.com/CowboyLogic/cerebro) | CLI — primary user-facing product; suite docs home | Active |
+| [`cerebro-schema`](https://github.com/CowboyLogic/cerebro-schema) | `@cowboylogic/cerebro-schema` — shared types, JSON Schema, validator | Active |
+| [`cerebro-vscode-ext`](https://github.com/CowboyLogic/cerebro-vscode-ext) | VS Code extension | Active |
+| [`cerebro-vs-ext`](https://github.com/CowboyLogic/cerebro-vs-ext) | Visual Studio extension | Placeholder |
+| [`cerebro-intellij-ext`](https://github.com/CowboyLogic/cerebro-intellij-ext) | IntelliJ IDEA extension | Placeholder |
+| [`cerebro-eclipse-ext`](https://github.com/CowboyLogic/cerebro-eclipse-ext) | Eclipse extension | Placeholder |
+
+The repos are **separate git repositories** that form a coherent ecosystem. They are not a monorepo. Changes to one can ripple to others — read [Cross-repo changes](#cross-repo-changes) before starting work.
 
 ---
 
 ## Prerequisites
 
-- **Node.js 18+**
-- **npm 9+**
-- **TypeScript** (installed as a dev dependency — no global install needed)
+- **Node.js 20+** — required by all active packages
+- **git**
+- **GitHub CLI (`gh`)** — recommended for authentication and PR management
 
 ---
 
-## Getting Started
+## Workspace setup
+
+Clone and wire all repos with the bootstrap script from the CLI repo:
 
 ```bash
-# Clone the repository
-git clone https://github.com/CowboyLogic/cerebroer.git
-cd cerebroer
+curl -fsSL https://raw.githubusercontent.com/CowboyLogic/cerebro/main/bootstrap.js -o bootstrap.js
+node bootstrap.js [target-directory]
+```
 
-# Install dependencies
-npm install
+This clones all six repos into `./cerebro/` (or your chosen directory), installs `cerebro-schema` first (other packages depend on it via a `file:` link), then installs the remaining packages.
 
-# Run in development (TypeScript source, no build step)
-npm start
+The resulting layout:
 
-# Type-check without emitting
-npx tsc --noEmit
+```
+cerebro/
+├── cerebro/               ← CLI (this repo)
+├── cerebro-schema/        ← schema package
+├── cerebro-vscode-ext/    ← VS Code extension
+├── cerebro-vs-ext/
+├── cerebro-intellij-ext/
+└── cerebro-eclipse-ext/
 ```
 
 ---
 
-## Project Structure
+## Development process
 
-```
-src/
-├── index.ts              CLI entry point (commander) — exports `program` for testability
-├── ui/
-│   └── interactive.ts    Interactive TUI built on @clack/prompts
-├── core/
-│   ├── types.ts          Shared types, constants (IDE_DISPLAY_NAMES, DEFAULT_REPOS)
-│   ├── github.ts         GitHub API — tree, raw file fetching, parseRepoUrl
-│   ├── registry.ts       Auto-discovers components from a repo's file tree
-│   └── installer.ts      Orchestrates install: fetches file contents, delegates to target
-├── targets/
-│   ├── base.ts           Abstract BaseInstaller — handles dry-run, error recording, file writes
-│   ├── claude-code.ts    Claude Code installer (~/.claude/)
-│   ├── opencode.ts       OpenCode installer (<configDir>/opencode/)
-│   ├── vscode.ts         VS Code installer (.vscode/)
-│   ├── copilot.ts        Copilot CLI installer (.github/)
-│   └── index.ts          Installer registry — getInstaller(), getAllInstallers()
-└── utils/
-    ├── platform.ts       OS/platform detection, getUserConfigDir()
-    ├── paths.ts          IDE path resolution, findWorkspaceRoot(), ensureDir()
-    └── theme.ts          Terminal colors, icons, and layout helpers (chalk)
-```
+All work follows **Design → Specification → Tests → Code** as defined in [S-0006](docs/adr/S-0006-design-first-development-process.md). Code is always last.
 
-### Key design decisions
+| Phase | What happens | Artifact |
+|-------|-------------|----------|
+| **Design** | Problem understood; ADRs written for significant decisions | `docs/adr/` |
+| **Specification** | Interface/contract and requirements defined | `docs/spec/` |
+| **Tests** | Tests written from spec requirement IDs — all fail initially | Test files |
+| **Code** | Code written to make failing tests pass | Source files |
 
-- **No build step**: TypeScript is run directly via `tsx`. There is no `dist/` folder.
-- **Pure Node.js HTTP**: GitHub API calls use `node:https` directly (no axios or fetch) to keep the dependency footprint small.
-- **ESM modules**: The project uses `"type": "module"` throughout. All imports use `.js` extensions (resolved to `.ts` at runtime by `tsx`).
-- **Installer pattern**: Each IDE has its own class extending `BaseInstaller`. Override `getInstallDir`, `getTargetFileName`, and optionally `transformContent` to implement IDE-specific behavior. The base class handles file writes, dry-run logic, and error recording.
+No PR introducing a new `feat` is complete without an accepted specification.
 
 ---
 
-## Running Tests
+## Branching
 
-The test suite uses [Vitest](https://vitest.dev/) with native ESM support.
-
-```bash
-# Run all tests once
-npm test
-
-# Watch mode (re-runs on file change)
-npm run test:watch
-
-# Run with coverage report
-npm run test:coverage
-
-# Run a specific subset
-npm run test:unit
-npm run test:integration
-npm run test:cli
-```
-
-### Test layout
+Trunk-based development. All branches are cut from `main` and merged back via pull request.
 
 ```
-tests/
-├── __fixtures__/
-│   └── tree-responses.ts   Factory helpers: makeComponent(), makeSource(), makeTreeResponse()
-│                           Sample content: SAMPLE_SKILL_MD, SAMPLE_AGENT_MD, etc.
-├── __mocks__/
-│   └── node-https.ts       Manual mock for node:https — seedResponse(url, status, body)
-├── setup.ts                Global beforeEach/afterEach: env isolation, vi.unstubAllEnvs()
-├── unit/
-│   ├── core/               github, registry, installer, types
-│   ├── targets/            base, claude-code, opencode, vscode, copilot, index
-│   └── utils/              platform, paths, theme
-├── integration/
-│   ├── discovery-flow.ts   Full discover → parse → enrich pipeline
-│   ├── install-flow.ts     Full install path (component → write)
-│   └── multi-install.ts    Batch install behavior
-└── cli/
-    ├── install-command.ts
-    ├── browse-command.ts
-    └── targets-command.ts
+feat/<short-description>      new capability
+fix/<short-description>       bug fix
+docs/<short-description>      documentation only
+chore/<short-description>     maintenance, deps, tooling
 ```
 
-### Mocking conventions
-
-**`node:https`** — All network calls are intercepted by the manual mock in `tests/__mocks__/node-https.ts`. Seed responses before each test:
-
-```typescript
-seedResponse('api.github.com/repos/owner/repo/git/trees/main', 200, JSON.stringify(tree));
-seedResponse('raw.githubusercontent.com/owner/repo/main', 200, '# Content');
-clearResponses(); // called in beforeEach
-```
-
-The mock matches URLs by substring, so you only need to include the distinctive part of the URL.
-
-**`node:fs`** — Source files use `import fs from 'node:fs'` (default import). Mock both the default and named exports, and use `vi.hoisted()` so the mock references are available inside the `vi.mock()` factory:
-
-```typescript
-const { mockWriteFileSync, mockReadFileSync } = vi.hoisted(() => ({
-  mockWriteFileSync: vi.fn(),
-  mockReadFileSync: vi.fn(() => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }); }),
-}));
-
-vi.mock('node:fs', () => ({
-  default: { writeFileSync: mockWriteFileSync, readFileSync: mockReadFileSync },
-  writeFileSync: mockWriteFileSync,
-  readFileSync: mockReadFileSync,
-}));
-```
-
-**Environment variables** — Use `vi.stubEnv()` (automatically restored by `vi.unstubAllEnvs()` in `setup.ts`):
-
-```typescript
-vi.stubEnv('GITHUB_TOKEN', 'my-test-token');
-```
+Branches are short-lived — days, not weeks. `main` is always in a releasable state.
 
 ---
 
-## Adding a New IDE Target
+## Commit messages
 
-1. **Create `src/targets/<name>.ts`** extending `BaseInstaller`:
+[Conventional Commits](https://www.conventionalcommits.org/) are required. The type determines the version bump:
 
-```typescript
-import { BaseInstaller } from './base.js';
-import { InstallOptions } from '../core/types.js';
-
-export class MyIDEInstaller extends BaseInstaller {
-  get name() { return 'My IDE'; }
-
-  getInstallDir(opts: InstallOptions): string {
-    // Return the directory where files should be written
-  }
-
-  getTargetFileName(sourceFileName: string, opts: InstallOptions): string {
-    // Map source filename → destination filename (override for renaming)
-    return sourceFileName;
-  }
-
-  transformContent(content: string, opts: InstallOptions): string {
-    // Optionally transform file content before writing
-    return content;
-  }
-}
+```
+feat(scope): add catalog-first discovery       → minor bump
+fix(scope): resolve path traversal in target   → patch bump
+docs(adr): add S-0007 schema versioning        → no bump
+chore(deps): bump ajv to 8.17.1                → no bump
+feat!: rename ToolId values                    → major bump
 ```
 
-2. **Register it in `src/targets/index.ts`** — add your IDE key to the map returned by `getInstaller` and `getAllInstallers`.
+`scope` is optional but helps in multi-component repos (e.g., `registry`, `installer`, `ui`).
 
-3. **Add the IDE key and display name to `src/core/types.ts`** — extend the `TargetIDE` union type and `IDE_DISPLAY_NAMES` map.
-
-4. **Write tests** in `tests/unit/targets/<name>.test.ts` following the patterns in the existing target tests.
+A `BREAKING CHANGE:` footer on any commit type also triggers a major bump.
 
 ---
 
-## Code Conventions
+## Issues
 
-- **Formatting**: 2-space indentation, single quotes for strings, no semicolons are *not* enforced by a linter — just match the style of surrounding code.
-- **No barrel exports**: Import directly from the file containing the symbol.
-- **Types first**: Add types to `src/core/types.ts` if they are shared across modules.
-- **Error handling**: Installers should catch errors per-file and record them in `result.errors` rather than throwing — this lets batch installs continue even if one file fails.
-- **No side effects at module level**: Keep all logic inside functions so modules can be imported safely in tests without triggering network or filesystem calls.
+Every code or documentation change should have a corresponding GitHub issue in the **affected repository**. Use the issue templates:
+
+- **Feature** — new capability; includes the D→S→T→C phase checklist
+- **Bug** — something broken; references the violated requirement if applicable
+- **ADR** — architectural decision to be made; identifies affected repos
+
+Issues are tracked on the [Cerebro project board](https://github.com/orgs/CowboyLogic/projects/6).
+
+**Which repo do I open the issue in?**
+Open it in the repo where the work will happen. If a change spans multiple repos, open a primary issue in the most affected repo and link to it from issues in the others.
 
 ---
 
-## Submitting Changes
+## Pull requests
 
-1. Fork the repository and create a feature branch from `main`.
-2. Make your changes with focused, atomic commits.
-3. Ensure all tests pass: `npm test`
-4. Open a pull request against `main` with a clear description of what changed and why.
+Every merge to `main` goes through a pull request. Fill in the PR template completely.
+
+**CI must pass** before a PR can be merged. CI runs `npm run build` and `npm test` on every push and PR. A failure blocks merge.
+
+---
+
+## Cross-repo changes
+
+**`cerebro-schema` is the contract between all products.** A change to its public types or the catalog format affects every consuming repo. Before changing anything in `cerebro-schema`:
+
+1. Check whether a suite-level ADR (`S-XXXX` in [`docs/adr/`](docs/adr/README.md)) covers the change — if not, write one first
+2. Open issues in all repos that will need corresponding updates
+3. Note the impact in your PR's cross-repo section
+
+**Schema versioning:** The `cerebro` field in `cerebro-catalog.yaml` (e.g., `cerebro: "1"`) is the catalog format version. The schema package retains validators for the current and previous major version — see [S-0007](docs/adr/S-0007-schema-versioning-strategy.md).
+
+**Version coordination:**
+- Minor and patch versions are managed independently per repo
+- When `cerebro-schema` bumps major, all consuming repos must update their dependency and cut their own major release before shipping new features
+
+---
+
+## Release process
+
+> Releases are managed by the project maintainer.
+
+1. Bump version in `package.json` following the commit type → semver mapping above
+2. Commit: `chore(release): bump version to X.Y.Z`
+3. Merge to `main` via PR (CI must pass)
+4. Trigger the **Release** workflow manually from the GitHub Actions tab with release notes
+5. The workflow creates the git tag and GitHub release
+6. Publish steps (npm, VS Code Marketplace) are separate manually-triggered workflow steps
+
+---
+
+## Architecture decisions
+
+Suite-level decisions are recorded as `S-XXXX` ADRs in [`docs/adr/`](docs/adr/README.md). Product-specific decisions live in `docs/adr/` in the relevant repo.
+
+Before making a significant structural decision, check whether an ADR already covers it. If you think an existing decision should change, open an issue — a superseding ADR must be accepted before the change is implemented.
+
+Template: [`docs/adr/_template.md`](docs/adr/_template.md)
+
+---
+
+## Questions
+
+Open a [GitHub Discussion](https://github.com/CowboyLogic/cerebro/discussions) or file an issue with the `status: needs-discussion` label.
