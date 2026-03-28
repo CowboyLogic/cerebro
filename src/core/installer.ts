@@ -1,46 +1,30 @@
-import { Component, InstallOptions, InstallResult, TargetIDE, Scope } from './types.js';
-import { getFileContents } from './github.js';
-import { getInstaller } from '../targets/index.js';
+import type { Artifact, ToolId, Scope, InstallOptions, InstallResult } from './types.js';
+import { installArtifact } from '../targets/artifactInstaller.js';
+import { logger } from '../utils/logger.js';
 
 export async function installComponent(
-  component: Component,
-  target: TargetIDE,
+  artifact: Artifact,
+  tool: ToolId,
   scope: Scope,
+  sourceRepo: string,
   workspaceRoot?: string,
   dryRun = false,
 ): Promise<InstallResult> {
-  // Fetch file contents if not already loaded
-  const filePaths = component.files.map(f => f.path);
-  const filesWithContent = await getFileContents(component.source, filePaths);
-
-  // Merge content into component
-  const enrichedComponent: Component = {
-    ...component,
-    files: filesWithContent,
-  };
-
-  const installer = getInstaller(target);
-  const options: InstallOptions = {
-    component: enrichedComponent,
-    target,
-    scope,
-    workspaceRoot,
-    dryRun,
-  };
-
-  return installer.install(options);
+  logger.info(`installComponent  id=${artifact.id}  tool=${tool}  scope=${scope}  dryRun=${dryRun}`);
+  return installArtifact({ artifact, tool, scope, sourceRepo, workspaceRoot, dryRun });
 }
 
 export async function installMultiple(
-  components: Component[],
-  target: TargetIDE,
+  artifacts: Artifact[],
+  tool: ToolId,
   scope: Scope,
+  sourceRepo: string,
   workspaceRoot?: string,
   dryRun = false,
 ): Promise<InstallResult[]> {
   const results: InstallResult[] = [];
-  for (const component of components) {
-    const result = await installComponent(component, target, scope, workspaceRoot, dryRun);
+  for (const artifact of artifacts) {
+    const result = await installComponent(artifact, tool, scope, sourceRepo, workspaceRoot, dryRun);
     results.push(result);
   }
   return results;

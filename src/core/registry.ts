@@ -1,6 +1,43 @@
 import path from 'node:path';
+import yaml from 'js-yaml';
+import { validateCatalog } from '@cowboylogic/cerebro-schema/validate';
+import type { Artifact, ArtifactType, CompatibilityEntry, ArtifactFile, ToolId, CerebroCatalog } from './types.js';
 import { getRepoTree, getFileContent } from './github.js';
-import { Component, ComponentType, RepoSource, TargetIDE } from './types.js';
+import type { RepoSource } from './types.js';
+import { logger } from '../utils/logger.js';
+
+// ── Catalog-based discovery ───────────────────────────────────────────────────
+
+const CATALOG_FILENAMES = ['cerebro-catalog.yaml', 'cerebro-catalog.yml'];
+
+/**
+ * Try to load and validate a cerebro-catalog.yaml from the repo root.
+ * Returns null on any failure (missing file, invalid YAML, schema violation).
+ */
+async function loadCatalog(source: RepoSource): Promise<CerebroCatalog | null> {
+  for (const filename of CATALOG_FILENAMES) {
+    logger.debug(`loadCatalog attempting  repo=${source.owner}/${source.repo}  file=${filename}`);
+    try {
+      const raw = await getFileContent(source, filename);
+      const parsed = yaml.load(raw);
+      const result = validateCatalog(parsed);
+      if (result.valid) {
+        const catalog = parsed as CerebroCatalog;
+        logger.debug(`loadCatalog found  artifacts=${catalog.artifacts.length}`);
+        return catalog;
+      }
+      logger.warn(
+        `loadCatalog "${filename}" failed validation  repo=${source.owner}/${source.repo}`,
+        result.errors.map(e => `${e.path}: ${e.message}`).join(', ')
+      );
+    } catch (err) {
+      logger.debug(`loadCatalog "${filename}" not found  repo=${source.owner}/${source.repo}  ${(err as Error).message}`);
+    }
+  }
+  return null;
+}
+
+// ── Heuristic discovery (fallback) ───────────────────────────────────────────
 
 interface TreeItem {
   path: string;
@@ -8,35 +45,140 @@ interface TreeItem {
   size?: number;
 }
 
-const COMPONENT_PATTERNS: Record<string, { type: ComponentType; targets: TargetIDE[] }> = {
-  // Claude Code patterns
-  'SKILL.md': { type: 'skill', targets: ['claude-code'] },
-  'CLAUDE.md': { type: 'instruction', targets: ['claude-code'] },
-  'claude.md': { type: 'instruction', targets: ['claude-code'] },
-  // VSCode patterns
-  '.vscode/snippets': { type: 'snippet', targets: ['vscode'] },
-  'snippets.json': { type: 'snippet', targets: ['vscode'] },
-  'keybindings.json': { type: 'snippet', targets: ['vscode'] },
-  // Copilot patterns
-  'copilot-instructions.md': { type: 'instruction', targets: ['copilot'] },
-  'copilot-instructions': { type: 'instruction', targets: ['copilot'] },
-  // General patterns
-  'agent.md': { type: 'agent', targets: ['claude-code', 'opencode', 'copilot'] },
-  'agent.yaml': { type: 'agent', targets: ['claude-code', 'opencode', 'copilot'] },
-  'agent.yml': { type: 'agent', targets: ['claude-code', 'opencode', 'copilot'] },
-  'prompt.md': { type: 'prompt', targets: ['claude-code', 'opencode', 'vscode', 'copilot'] },
-  'instructions.md': { type: 'instruction', targets: ['claude-code', 'opencode', 'vscode', 'copilot'] },
+/**
+ * Marker files that identify a directory as a single artifact.
+ * When found, the entire parent directory becomes one artifact.
+ */
+const DIR_MARKER_PATTERNS: Record<string, { type: ArtifactType; tools: ToolId[] }> = {
+  'SKILL.md':        { type: 'skill',       tools: ['claude-code'] },
+  'CLAUDE.md':       { type: 'instruction', tools: ['claude-code'] },
+  'claude.md':       { type: 'instruction', tools: ['claude-code'] },
+  'agent.md':        { type: 'agent',       tools: ['claude-code', 'opencode', 'copilot'] },
+  'agent.yaml':      { type: 'agent',       tools: ['claude-code', 'opencode', 'copilot'] },
+  'agent.yml':       { type: 'agent',       tools: ['claude-code', 'opencode', 'copilot'] },
+  'prompt.md':       { type: 'prompt',      tools: ['claude-code', 'opencode', 'copilot'] },
+  'instructions.md': { type: 'instruction', tools: ['claude-code', 'opencode', 'copilot'] },
+  'copilot-instructions.md': { type: 'instruction', tools: ['copilot'] },
 };
 
-const MARKDOWN_EXTENSIONS = ['.md', '.mdx'];
-const CODE_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ts', '.js', '.py'];
+/**
+ * Top-level directories whose direct file children are each one artifact.
+ */
+const FLAT_COLLECTION_DIRS: Record<string, ArtifactType> = {
+  skills:       'skill',
+  agents:       'agent',
+  prompts:      'prompt',
+  instructions: 'instruction',
+  snippets:     'snippet',
+  workflows:    'workflow',
+};
 
-export async function discoverComponents(source: RepoSource): Promise<Component[]> {
+const MARKDOWN_EXTENSIONS = new Set(['.md', '.mdx']);
+const CODE_EXTENSIONS = new Set(['.json', '.yaml', '.yml', '.toml', '.ts', '.js', '.py']);
+const TYPE_SUFFIXES = /\.(agent|instructions?|prompt|skill|snippet|workflow)$/i;
+
+/** Infer which tools an artifact type supports when no catalog is present. */
+function inferToolsFromType(type: ArtifactType): ToolId[] {
+  switch (type) {
+    case 'skill':       return ['claude-code'];
+    case 'agent':       return ['claude-code', 'opencode', 'copilot'];
+    case 'prompt':      return ['claude-code', 'opencode', 'copilot'];
+    case 'instruction': return ['claude-code', 'opencode', 'copilot'];
+    case 'snippet':     return ['copilot'];
+    case 'workflow':    return ['claude-code', 'opencode'];
+    case 'hook':        return ['claude-code'];
+    case 'mcp-server':  return ['claude-code', 'opencode'];
+    default:            return ['claude-code'];
+  }
+}
+
+/**
+ * Synthesize a default install target path for a heuristically-discovered file.
+ * These defaults mirror the conventions used by each tool's community.
+ */
+function defaultTargetPath(tool: ToolId, type: ArtifactType, artifactName: string, fileName: string): string {
+  switch (tool) {
+    case 'claude-code':
+      switch (type) {
+        case 'skill':       return `.claude/skills/${artifactName}/${fileName}`;
+        case 'agent':       return `.claude/agents/${fileName}`;
+        case 'hook':        return `.claude/hooks/${fileName}`;
+        case 'instruction': return `.claude/${fileName}`;
+        default:            return `.claude/${type}s/${fileName}`;
+      }
+    case 'opencode':
+      switch (type) {
+        case 'skill':       return `.opencode/skills/${artifactName}/${fileName}`;
+        case 'agent':       return `.opencode/agents/${fileName}`;
+        case 'instruction': return `.opencode/${fileName}`;
+        default:            return `.opencode/${type}s/${fileName}`;
+      }
+    case 'copilot':
+      switch (type) {
+        case 'instruction': return `.github/copilot-instructions.md`;
+        case 'agent':       return `.github/copilot/agents/${artifactName}.md`;
+        default:            return `.github/copilot/${fileName}`;
+      }
+    default:
+      return `${tool}/${type}s/${fileName}`;
+  }
+}
+
+/** Build synthesized compatibility entries for a heuristically-discovered artifact. */
+function synthesizeCompatibility(
+  name: string,
+  type: ArtifactType,
+  tools: ToolId[],
+  filePaths: string[],
+): CompatibilityEntry[] {
+  return tools.map(tool => ({
+    tool,
+    scope: ['workspace', 'global'] as ['workspace', 'global'],
+    files: filePaths.map((src): ArtifactFile => ({
+      source: src,
+      target: defaultTargetPath(tool, type, name, path.basename(src)),
+    })),
+  }));
+}
+
+/** Convert a display name into a valid lowercase slug for use as an artifact id. */
+function toSlug(raw: string): string {
+  const slug = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug.length >= 2 ? slug : slug.padEnd(2, '0');
+}
+
+/** Strip unsafe characters from a display name. */
+function sanitizeName(raw: string): string {
+  const name = path.basename(raw)
+    .replace(/\.\./g, '')
+    .replace(/[/\\]/g, '')
+    .replace(/[^\w\-_.]/g, '-')
+    .replace(/^[.\-]+/, '')
+    .slice(0, 100);
+  return name || 'unknown';
+}
+
+function deriveArtifactName(filePath: string): string {
+  const parts = filePath.split('/');
+  const fileName = parts[parts.length - 1];
+  if (['SKILL.md', 'CLAUDE.md', 'agent.yaml', 'agent.yml', 'agent.md'].includes(fileName)) {
+    const raw = parts.length > 1 ? parts[parts.length - 2] : fileName;
+    return sanitizeName(raw);
+  }
+  const ext = path.extname(fileName);
+  return sanitizeName(path.basename(fileName, ext).replace(TYPE_SUFFIXES, ''));
+}
+
+async function discoverHeuristic(source: RepoSource): Promise<Artifact[]> {
   const tree = await getRepoTree(source);
-  const components: Component[] = [];
+  const artifacts: Artifact[] = [];
   const seen = new Set<string>();
 
-  // Group files by directory
+  // Group blobs by parent directory
   const dirMap = new Map<string, TreeItem[]>();
   for (const item of tree) {
     if (item.type === 'blob') {
@@ -46,94 +188,106 @@ export async function discoverComponents(source: RepoSource): Promise<Component[
     }
   }
 
-  // Scan for known component patterns
+  // ── Pass 1: directory-marker patterns ──────────────────────────────────────
   for (const item of tree) {
     if (item.type !== 'blob') continue;
     const fileName = path.basename(item.path);
     const dirName = path.dirname(item.path);
+    const meta = DIR_MARKER_PATTERNS[fileName];
+    if (!meta) continue;
 
-    for (const [pattern, meta] of Object.entries(COMPONENT_PATTERNS)) {
-      if (fileName === pattern || item.path.includes(pattern)) {
-        const key = `${dirName}:${meta.type}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
+    const key = `dir:${dirName}:${meta.type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
 
-        const name = deriveComponentName(item.path, meta.type);
-        const dirFiles = dirMap.get(dirName) || [];
-
-        components.push({
-          name,
-          type: meta.type,
-          description: `${capitalize(meta.type)} from ${dirName || 'root'}`,
-          path: dirName,
-          files: dirFiles.map(f => ({
-            path: f.path,
-            name: path.basename(f.path),
-            size: f.size,
-          })),
-          source,
-          compatibleTargets: meta.targets,
-        });
-        break;
-      }
-    }
+    const dirFiles = (dirMap.get(dirName) ?? []).map(f => f.path);
+    const name = deriveArtifactName(item.path);
+    artifacts.push({
+      id: toSlug(name),
+      name,
+      description: `${capitalize(meta.type)} from ${dirName || 'root'}`,
+      type: meta.type,
+      compatibility: synthesizeCompatibility(name, meta.type, meta.tools, dirFiles),
+      tags: [],
+    });
   }
 
-  // Also discover standalone markdown files in known directories
-  const knownDirs = ['skills', 'agents', 'prompts', 'instructions', 'snippets', 'workflows'];
+  // ── Pass 2: flat collections ───────────────────────────────────────────────
   for (const item of tree) {
     if (item.type !== 'blob') continue;
+    const parts = item.path.split('/');
+    if (parts.length !== 2) continue;
+
+    const topDir = parts[0].toLowerCase();
+    const type = FLAT_COLLECTION_DIRS[topDir];
+    if (!type) continue;
+
     const ext = path.extname(item.path).toLowerCase();
-    const dirName = path.dirname(item.path);
-    const topDir = item.path.split('/')[0]?.toLowerCase();
+    if (!MARKDOWN_EXTENSIONS.has(ext) && !CODE_EXTENSIONS.has(ext)) continue;
 
-    if (MARKDOWN_EXTENSIONS.includes(ext) && knownDirs.includes(topDir)) {
-      const key = `${item.path}:standalone`;
-      if (seen.has(key)) continue;
-      // Check it wasn't already found
-      if (components.some(c => c.files.some(f => f.path === item.path))) continue;
-      seen.add(key);
+    if (artifacts.some(a => a.compatibility.some(c => c.files.some(f => f.source === item.path)))) continue;
 
-      const type = inferTypeFromDir(topDir);
-      components.push({
-        name: path.basename(item.path, ext),
-        type,
-        description: `${capitalize(type)} - ${path.basename(item.path)}`,
-        path: item.path,
-        files: [{ path: item.path, name: path.basename(item.path), size: item.size }],
-        source,
-        compatibleTargets: inferTargetsFromType(type),
-      });
-    }
+    const key = `file:${item.path}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const baseName = path.basename(item.path, path.extname(item.path)).replace(TYPE_SUFFIXES, '');
+    const name = sanitizeName(baseName);
+    const tools = inferToolsFromType(type);
+    artifacts.push({
+      id: toSlug(name),
+      name,
+      description: `${capitalize(type)} - ${path.basename(item.path)}`,
+      type,
+      compatibility: synthesizeCompatibility(name, type, tools, [item.path]),
+      tags: [],
+    });
   }
 
-  // Enrich descriptions by reading the first few lines of main files
-  await enrichDescriptions(components, source);
-
-  return components;
+  await enrichDescriptions(artifacts, source);
+  return artifacts;
 }
 
-async function enrichDescriptions(components: Component[], source: RepoSource): Promise<void> {
+// ── Public entry point ────────────────────────────────────────────────────────
+
+export async function discoverArtifacts(source: RepoSource): Promise<Artifact[]> {
+  logger.info(`discoverArtifacts start  repo=${source.owner}/${source.repo}`);
+
+  const catalog = await loadCatalog(source);
+  if (catalog) {
+    logger.info(`discoverArtifacts strategy=catalog  artifacts=${catalog.artifacts.length}`);
+    logSummary(source, catalog.artifacts, 'catalog');
+    return catalog.artifacts;
+  }
+
+  logger.info('discoverArtifacts strategy=heuristic  (no cerebro-catalog.yaml found)');
+  const artifacts = await discoverHeuristic(source);
+  logSummary(source, artifacts, 'heuristic');
+  return artifacts;
+}
+
+// ── Description enrichment ────────────────────────────────────────────────────
+
+async function enrichDescriptions(artifacts: Artifact[], source: RepoSource): Promise<void> {
   const batchSize = 5;
-  for (let i = 0; i < components.length; i += batchSize) {
-    const batch = components.slice(i, i + batchSize);
-    await Promise.all(batch.map(async (comp) => {
+  for (let i = 0; i < artifacts.length; i += batchSize) {
+    const batch = artifacts.slice(i, i + batchSize);
+    await Promise.all(batch.map(async (artifact) => {
+      const allSources = artifact.compatibility.flatMap(c => c.files.map(f => f.source));
+      const mainFile = allSources.find(p =>
+        p.endsWith('SKILL.md') || p.endsWith('README.md') ||
+        p.endsWith('.md') || p.endsWith('agent.yaml')
+      ) ?? allSources[0];
+
+      if (!mainFile) return;
       try {
-        const mainFile = comp.files.find(f =>
-          f.name === 'SKILL.md' || f.name === 'README.md' ||
-          f.name.endsWith('.md') || f.name === 'agent.yaml'
-        ) || comp.files[0];
-
-        if (!mainFile) return;
-        const content = await getFileContent(source, mainFile.path);
+        const content = await getFileContent(source, mainFile);
         const desc = extractDescription(content);
-        if (desc) comp.description = desc;
-
-        // Also extract tags
+        if (desc) (artifact as { description?: string }).description = desc;
         const tags = extractTags(content);
-        if (tags.length > 0) comp.tags = tags;
-      } catch {
-        // Keep original description
+        if (tags.length > 0) (artifact as { tags?: string[] }).tags = tags;
+      } catch (err) {
+        logger.debug(`enrichDescriptions failed  artifact=${artifact.id}  file=${mainFile}  ${(err as Error).message}`);
       }
     }));
   }
@@ -141,17 +295,14 @@ async function enrichDescriptions(components: Component[], source: RepoSource): 
 
 function extractDescription(content: string): string | null {
   const lines = content.split('\n').filter(l => l.trim());
-  // Skip frontmatter
   let start = 0;
   if (lines[0]?.startsWith('---')) {
     const end = lines.findIndex((l, i) => i > 0 && l.startsWith('---'));
     if (end > 0) start = end + 1;
   }
-  // Find first non-heading, non-empty line
   for (let i = start; i < Math.min(lines.length, start + 10); i++) {
     const line = lines[i]?.trim();
     if (!line || line.startsWith('#') || line.startsWith('---')) continue;
-    // Truncate to 100 chars
     return line.length > 100 ? line.slice(0, 97) + '...' : line;
   }
   return null;
@@ -165,38 +316,16 @@ function extractTags(content: string): string[] {
   return [];
 }
 
-function deriveComponentName(filePath: string, type: ComponentType): string {
-  const parts = filePath.split('/');
-  // Use parent directory name if file is a known marker
-  const fileName = parts[parts.length - 1];
-  if (['SKILL.md', 'CLAUDE.md', 'agent.yaml', 'agent.yml', 'agent.md'].includes(fileName)) {
-    return parts.length > 1 ? parts[parts.length - 2] : fileName;
+function logSummary(source: RepoSource, artifacts: Artifact[], strategy: string): void {
+  if (!logger.active) return;
+  const byType: Record<string, number> = {};
+  for (const a of artifacts) {
+    byType[a.type] = (byType[a.type] ?? 0) + 1;
   }
-  return path.basename(fileName, path.extname(fileName));
-}
-
-function inferTypeFromDir(dir: string): ComponentType {
-  const map: Record<string, ComponentType> = {
-    skills: 'skill',
-    agents: 'agent',
-    prompts: 'prompt',
-    instructions: 'instruction',
-    snippets: 'snippet',
-    workflows: 'workflow',
-  };
-  return map[dir] || 'unknown';
-}
-
-function inferTargetsFromType(type: ComponentType): TargetIDE[] {
-  switch (type) {
-    case 'skill': return ['claude-code'];
-    case 'agent': return ['claude-code', 'opencode', 'copilot'];
-    case 'prompt': return ['claude-code', 'opencode', 'vscode', 'copilot'];
-    case 'instruction': return ['claude-code', 'opencode', 'vscode', 'copilot'];
-    case 'snippet': return ['vscode'];
-    case 'workflow': return ['claude-code', 'opencode'];
-    default: return ['claude-code', 'opencode', 'vscode', 'copilot'];
-  }
+  logger.info(
+    `discoverArtifacts done  repo=${source.owner}/${source.repo}  strategy=${strategy}  total=${artifacts.length}`,
+    byType
+  );
 }
 
 function capitalize(s: string): string {

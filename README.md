@@ -1,41 +1,33 @@
-# AI Artifact Installer
+# Cerebro
 
-> Install AI components — skills, agents, prompts, and instructions — from GitHub repositories directly into your IDE.
+![Cerebro](docs/img/cerebro-logo.png)
 
-Supports **Claude Code**, **VS Code** (Copilot), **OpenCode**, and **Copilot CLI** across Windows, macOS, and Linux. Run it interactively with a polished terminal UI, or wire it into scripts with the CLI.
+A suite of tools for discovering and installing AI components — skills, agents, prompts, and instructions — from GitHub repositories directly into your IDE.
+
+Supports **Claude Code**, **VS Code** (Copilot), **OpenCode**, and **Copilot CLI** across Windows, macOS, and Linux.
 
 ---
 
-## Features
+## What's in this repository
 
-- **Browse & install** from any public GitHub repository
-- **Interactive TUI** with grouped, alphabetized component selection
-- **4 IDE targets**: Claude Code, VS Code, OpenCode, Copilot CLI
-- **2 scopes**: User (global) or Workspace (project-local)
-- **Dry-run mode** to preview installs before committing
-- **Cross-platform**: Windows, macOS, Linux
-- **Lightweight**: 14 dependencies, no native binaries
-
-### Default Repositories
-
-| Repository | Contents |
+| Folder | Description |
 |---|---|
-| [`github/awesome-copilot`](https://github.com/github/awesome-copilot) | Curated Copilot extensions, agents, and prompts |
-| [`anthropics/skills`](https://github.com/anthropics/skills) | Official Claude Code skills |
+| [`cerebro-cli/`](cerebro-cli/) | The Cerebro CLI application — browse and install AI components from your terminal |
+| [`docs/`](docs/) | Repository-wide documentation: requirements, specifications, and design notes |
 
 ---
 
-## Installation
+## Quick Start
 
 **Requirements**: Node.js 18+
 
 ```bash
 # Run directly with npx (no install needed)
-npx tsx src/index.ts
+npx cerebro
 
 # Or install globally
 npm install -g .
-ai-install
+cerebro
 ```
 
 Set `GITHUB_TOKEN` to avoid rate limits when browsing large repositories:
@@ -46,200 +38,88 @@ export GITHUB_TOKEN=ghp_your_token_here
 
 ---
 
-## Usage
+## Cerebro CLI — Overview
+
+The CLI lets you browse any public GitHub repository for AI components and install them with a single command.
 
 ### Interactive Mode (default)
 
 ```bash
-npm start
-# or
-ai-install
+cerebro
 ```
 
 Walks you through selecting a repository, browsing components by type, choosing your target IDE, and picking a scope — all in a guided terminal UI.
 
-```
-  ╔══════════════════════════════════════════════╗
-  ║    AI Artifact Installer                    ║
-  ║    Install skills, agents & prompts          ║
-  ║    into your favorite IDE                    ║
-  ╚══════════════════════════════════════════════╝
+![Cerebro Main Menu](docs/img/cerebro-main-menu.png)
 
-◆  Where would you like to browse components?
-│  ● ★ github/awesome-copilot  Curated Copilot extensions & prompts
-│  ○ ✨ anthropics/skills      Official Claude Code skills
-│  ○ 🌐 Custom repository      Enter a GitHub URL or owner/repo
-└
-```
-
-### Browse Components
+### Browse & Install
 
 ```bash
 # Browse default repositories
-ai-install browse
+cerebro browse
 
 # Browse a specific repo
-ai-install browse anthropics/skills
+cerebro browse anthropics/skills
 
-# Filter by component type
-ai-install browse github/awesome-copilot --type agent
+# Install by name
+cerebro install brand-guidelines
 
-# Browse any public GitHub repo
-ai-install browse owner/repo
-ai-install browse https://github.com/owner/repo
+# Specify repo, target, and scope
+cerebro install pdf --repo anthropics/skills --target claude-code --scope user
+
+# Preview without writing files
+cerebro install frontend-design --dry-run
 ```
 
-### Direct Install
-
-```bash
-# Install by name (searches default repos)
-ai-install install brand-guidelines
-
-# Specify repo, target IDE, and scope
-ai-install install pdf --repo anthropics/skills --target claude-code --scope user
-
-# Preview without writing any files
-ai-install install frontend-design --dry-run
-
-# Install into current workspace
-ai-install install a11y --repo github/awesome-copilot --target vscode --scope workspace
-```
-
-### List Supported Targets
-
-```bash
-ai-install targets
-```
-
----
-
-## Component Types
-
-| Type | Icon | Description |
-|---|---|---|
-| `skill` | 🎯 | Claude Code skills (SKILL.md + supporting files) |
-| `agent` | 🤖 | Custom AI agents with defined personas and tools |
-| `prompt` | 💬 | Reusable prompt templates |
-| `instruction` | 📋 | IDE-level behavior instructions (CLAUDE.md, copilot-instructions.md) |
-| `snippet` | ✂️ | Code snippets for editors |
-| `workflow` | 🔄 | Multi-step automated workflows |
-
----
-
-## Target IDEs
+### Supported IDE Targets
 
 | IDE | Flag | Scope: User | Scope: Workspace |
 |---|---|---|---|
 | Claude Code | `claude-code` | `~/.claude/` | `.claude/` |
 | VS Code | `vscode` | OS config dir¹ | `.vscode/` |
 | OpenCode | `opencode` | OS config dir¹ | `.opencode/` |
-| Copilot CLI | `copilot` | `~/.github/` | `.github/` |
+| Copilot CLI | `copilot` | `~/.copilot/` | `.github/` |
 
 ¹ Windows: `%APPDATA%`, macOS: `~/Library/Application Support`, Linux: `~/.config`
 
-### What gets installed where
+### Default Repositories
 
-**Claude Code — Skill**
-```
-~/.claude/skills/<name>/SKILL.md
-~/.claude/skills/<name>/<supporting-files>
-```
-
-**Claude Code — Instruction**
-```
-~/.claude/CLAUDE.md          # user scope
-.claude/CLAUDE.md            # workspace scope
-```
-
-**VS Code / Copilot — Instruction or Prompt**
-```
-.github/copilot-instructions.md   # appended, not overwritten
-```
-
-**Copilot CLI — Agent**
-```
-~/.github/agents/<name>.md
-```
-
----
-
-## Environment Variables
-
-| Variable | Description |
+| Repository | Contents |
 |---|---|
-| `GITHUB_TOKEN` | Personal access token for higher GitHub API rate limits (5000 req/hr vs 60) |
+| [`github/awesome-copilot`](https://github.com/github/awesome-copilot) | Curated Copilot extensions, agents, and prompts |
+| [`anthropics/skills`](https://github.com/anthropics/skills) | Official Claude Code skills |
+
+See [`cerebro-cli/`](cerebro-cli/) for the full CLI reference and developer documentation.
 
 ---
 
-## CLI Reference
+## Documentation
 
-```
-Usage: ai-install [options] [command]
-
-Commands:
-  interactive          Launch interactive installer UI (default)
-  browse [repo]        List components in a repository
-  install <component>  Install a component by name
-  targets              Show supported IDE targets
-  help [command]       Show help for a command
-
-Options for browse:
-  -t, --type <type>    Filter by type: skill | agent | prompt | instruction | snippet | workflow
-
-Options for install:
-  -r, --repo <repo>    GitHub repo (owner/repo or URL)
-  -t, --target <ide>   Target IDE: claude-code | opencode | vscode | copilot  [default: claude-code]
-  -s, --scope <scope>  Scope: user | workspace  [default: workspace]
-  --dry-run            Preview install paths without writing files
-```
+- [Requirements & Specification](docs/requirements.md)
 
 ---
 
-## Architecture
+## Contributing
 
-```
-src/
-├── index.ts              CLI entry point (commander)
-├── ui/
-│   └── interactive.ts    Interactive TUI (@clack/prompts)
-├── core/
-│   ├── types.ts          Shared types and constants
-│   ├── github.ts         GitHub API — tree, contents, raw file fetching
-│   ├── registry.ts       Component discovery from repo file tree
-│   └── installer.ts      Install orchestrator
-├── targets/
-│   ├── base.ts           Abstract BaseInstaller
-│   ├── claude-code.ts    Claude Code installer
-│   ├── opencode.ts       OpenCode installer
-│   ├── vscode.ts         VS Code installer
-│   ├── copilot.ts        Copilot CLI installer
-│   └── index.ts          Installer registry
-└── utils/
-    ├── platform.ts       OS detection and config paths
-    ├── paths.ts          IDE path resolution, workspace root finder
-    └── theme.ts          Terminal colors, icons, and layout helpers
-```
+See [`cerebro-cli/CONTRIBUTING.md`](cerebro-cli/CONTRIBUTING.md) for project setup, architecture, testing conventions, and how to add new IDE targets.
 
 ---
 
-## Adding a Custom Repository
+## License
 
-Any public GitHub repository works. Components are auto-detected based on file patterns:
-
-| File/Pattern | Detected as |
-|---|---|
-| `SKILL.md` | Claude Code Skill |
-| `CLAUDE.md` / `claude.md` | Claude Code Instruction |
-| `copilot-instructions.md` | Copilot Instruction |
-| `agent.md` / `agent.yaml` | Agent |
-| `prompt.md` | Prompt |
-| Files under `skills/`, `agents/`, `prompts/`, `instructions/` | Respective type |
+MIT
 
 ```bash
 # Use any GitHub repo
-ai-install browse my-org/my-ai-components
-ai-install install my-skill --repo my-org/my-ai-components --target claude-code
+cerebro browse my-org/my-ai-components
+cerebro install my-skill --repo my-org/my-ai-components --target claude-code
 ```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for project setup, architecture, testing conventions, and how to add new IDE targets.
 
 ---
 

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx:*)",
+      "Bash(npx vitest:*)",
+      "Bash(node -e \":*)",
+      "Bash(git -C \"D:/projects/repos/CowboyLogic/ai-artifact-installer\" log --format=\"%an\" -1)",
+      "Bash(node -e \"const {resolve} = require\\(''path''\\); const s = resolve\\(''src/index.ts''\\); console.log\\(s\\); console.log\\(s.length\\);\")",
+      "Bash(node -e \"console.log\\(require\\(''''./node_modules/commander/package.json''''\\).version\\)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(node -e \"console.log\\(process.argv[1]\\)\")",
+      "Bash(npm show:*)",
+      "Bash(npm uninstall:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(awk 'NR>=130 && NR<=200')",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
