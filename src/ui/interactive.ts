@@ -2,12 +2,13 @@ import { select, checkbox, input, confirm, Separator } from '@inquirer/prompts';
 import readline from 'node:readline';
 import ora from 'ora';
 import {
-  Component, TargetIDE, Scope, RepoSource,
+  Artifact, ToolId, Scope, RepoSource,
   DEFAULT_REPOS, IDE_DISPLAY_NAMES, InstallResult,
 } from '../core/types.js';
 import { parseRepoUrl } from '../core/github.js';
-import { discoverComponents } from '../core/registry.js';
+import { discoverArtifacts } from '../core/registry.js';
 import { installComponent } from '../core/installer.js';
+import { getSupportedTools } from '../targets/artifactInstaller.js';
 import { findWorkspaceRoot } from '../utils/paths.js';
 import { loadSettings, addCustomRepo, UserSettings } from '../core/settings.js';
 import { theme, icons, banner, resultBox, stepBadge, tagLabel, statsLine } from '../utils/theme.js';
@@ -15,21 +16,22 @@ import { logger } from '../utils/logger.js';
 
 const BACK = Symbol('back');
 
-const IDE_TYPE_HINTS: Record<TargetIDE, string> = {
-  'claude-code': 'skills · agents · prompts · instructions',
-  'opencode':    'agents · instructions · prompts',
-  'vscode':      'snippets · prompts · workflows',
-  'copilot':     'prompts · instructions',
+const TOOL_TYPE_HINTS: Record<ToolId, string> = {
+  'claude-code':   'skills · agents · prompts · instructions · hooks',
+  'opencode':      'agents · instructions · prompts',
+  'copilot':       'prompts · instructions · agents',
+  'visual-studio': 'prompts · instructions',
+  'intellij':      'prompts · instructions',
 };
 
 // ── wizard steps ─────────────────────────────────────────────────────────────
 
 const Step = {
-  REPO:       'repo',
-  COMPONENTS: 'components',
-  IDE:        'ide',
-  SCOPE:      'scope',
-  CONFIRM:    'confirm',
+  REPO:      'repo',
+  ARTIFACTS: 'artifacts',
+  TOOL:      'tool',
+  SCOPE:     'scope',
+  CONFIRM:   'confirm',
 } as const;
 type Step = typeof Step[keyof typeof Step];
 
@@ -44,7 +46,7 @@ const PROMPT_FREEZE_SUMMARY_MS = 15000;
 
 function printHeader(): void {
   console.log(banner());
-  console.log(theme.brandBold('◆') + '  ' + theme.brandBold('Welcome to Cerebro') + theme.muted(' — your AI component installer'));
+  console.log(theme.brandBold('◆') + '  ' + theme.brandBold('Welcome to Cerebro') + theme.muted(' — your AI artifact installer'));
   console.log('');
 }
 
@@ -52,10 +54,10 @@ export async function runInteractive(): Promise<void> {
   const settings = loadSettings();
 
   let source: RepoSource | null = null;
-  let cachedComponents: Component[] = [];
+  let cachedArtifacts: Artifact[] = [];
   let cachedSource: RepoSource | null = null;
-  let selectedComponents: Component[] = [];
-  let target: TargetIDE | null = null;
+  let selectedArtifacts: Artifact[] = [];
+  let tool: ToolId | null = null;
   let scope: Scope | null = null;
 
   let step: Step = Step.REPO;
@@ -64,8 +66,6 @@ export async function runInteractive(): Promise<void> {
 
   // ── State-machine loop ────────────────────────────────────────────────────
   while (true) {
-    // Clear and redraw the header on every step so the screen stays clean
-    // regardless of how we arrived here (forward, back, or post-install).
     console.clear();
     printHeader();
     logger.debug(`wizard loop  step=${step}`);
@@ -83,7 +83,7 @@ export async function runInteractive(): Promise<void> {
 
         if (choice === 'custom') {
           const url = await promptCustomUrl();
-          if (url === BACK) break; // stay at Step.REPO
+          if (url === BACK) break;
           source = parseRepoUrl(url as string);
           logger.info(`custom repo parsed  source=${source.owner}/${source.repo}`);
           const updated = addCustomRepo(settings, source);
@@ -93,38 +93,38 @@ export async function runInteractive(): Promise<void> {
           logger.info(`builtin repo resolved  source=${source.owner}/${source.repo}`);
         }
 
-        step = Step.COMPONENTS;
+        step = Step.ARTIFACTS;
         break;
       }
 
-      // ── Step 2: discover & select components ─────────────────────────────
-      case Step.COMPONENTS: {
+      // ── Step 2: discover & select artifacts ──────────────────────────────
+      case Step.ARTIFACTS: {
         if (!sourcesEqual(source!, cachedSource)) {
-          logger.info(`fetchComponents cache-miss  source=${source!.owner}/${source!.repo}`);
-          const fetched = await fetchComponents(source!);
+          logger.info(`fetchArtifacts cache-miss  source=${source!.owner}/${source!.repo}`);
+          const fetched = await fetchArtifacts(source!);
           if (fetched === null) { step = Step.REPO; break; }
-          cachedComponents = fetched;
+          cachedArtifacts = fetched;
           cachedSource = source;
         } else {
-          logger.debug(`fetchComponents cache-hit  source=${source!.owner}/${source!.repo}  count=${cachedComponents.length}`);
+          logger.debug(`fetchArtifacts cache-hit  source=${source!.owner}/${source!.repo}  count=${cachedArtifacts.length}`);
         }
 
-        logger.debug(`prompt:components  totalOptions=${cachedComponents.length}`);
-        const selected = await promptComponents(cachedComponents);
+        logger.debug(`prompt:artifacts  totalOptions=${cachedArtifacts.length}`);
+        const selected = await promptArtifacts(cachedArtifacts);
         if (selected === BACK) { step = Step.REPO; break; }
 
-        selectedComponents = (selected as Component[]).filter(Boolean);
-        logger.info(`prompt:components  selected=${selectedComponents.length}`, selectedComponents.map(c => c.name));
-        step = Step.IDE;
+        selectedArtifacts = (selected as Artifact[]).filter(Boolean);
+        logger.info(`prompt:artifacts  selected=${selectedArtifacts.length}`, selectedArtifacts.map(a => a.id));
+        step = Step.TOOL;
         break;
       }
 
-      // ── Step 3: choose target IDE ─────────────────────────────────────────
-      case Step.IDE: {
-        const choice = await promptIDE(selectedComponents);
-        if (choice === BACK) { step = Step.COMPONENTS; break; }
-        target = choice as TargetIDE;
-        logger.debug(`prompt:ide  choice=${target}`);
+      // ── Step 3: choose target tool ────────────────────────────────────────
+      case Step.TOOL: {
+        const choice = await promptTool(selectedArtifacts);
+        if (choice === BACK) { step = Step.ARTIFACTS; break; }
+        tool = choice as ToolId;
+        logger.debug(`prompt:tool  choice=${tool}`);
         step = Step.SCOPE;
         break;
       }
@@ -132,7 +132,7 @@ export async function runInteractive(): Promise<void> {
       // ── Step 4: choose scope ──────────────────────────────────────────────
       case Step.SCOPE: {
         const choice = await promptScope();
-        if (choice === BACK) { step = Step.IDE; break; }
+        if (choice === BACK) { step = Step.TOOL; break; }
         scope = choice as Scope;
         logger.debug(`prompt:scope  choice=${scope}`);
         step = Step.CONFIRM;
@@ -141,11 +141,12 @@ export async function runInteractive(): Promise<void> {
 
       // ── Step 5: confirm & install ─────────────────────────────────────────
       case Step.CONFIRM: {
-        const confirmed = await promptConfirm(source!, selectedComponents, target!, scope!);
+        const confirmed = await promptConfirm(source!, selectedArtifacts, tool!, scope!);
         if (confirmed === BACK || !confirmed) { step = Step.SCOPE; break; }
 
-        logger.info(`install begin  components=${selectedComponents.length}  target=${target}  scope=${scope}`);
-        await doInstall(selectedComponents, target!, scope!);
+        const sourceRepo = `${source!.owner}/${source!.repo}`;
+        logger.info(`install begin  artifacts=${selectedArtifacts.length}  tool=${tool}  scope=${scope}`);
+        await doInstall(selectedArtifacts, tool!, scope!, sourceRepo);
         logger.info('install complete  prompting continue');
 
         const next = await promptContinue();
@@ -156,13 +157,13 @@ export async function runInteractive(): Promise<void> {
         }
         if (next === 'same') {
           logger.debug('post-install  continue=same-repo');
-          step = Step.COMPONENTS;
+          step = Step.ARTIFACTS;
         } else {
           logger.debug('post-install  continue=new-repo');
           step = Step.REPO;
         }
-        selectedComponents = [];
-        target = null;
+        selectedArtifacts = [];
+        tool = null;
         scope = null;
         break;
       }
@@ -177,10 +178,6 @@ export async function runInteractive(): Promise<void> {
 
 // ── prompt helpers ────────────────────────────────────────────────────────────
 
-/**
- * Wraps an @inquirer/prompts call with watchdog logging.
- * Returns BACK if the user cancels (Ctrl+C → ExitPromptError).
- */
 async function withPromptLogging<T>(
   name: string,
   promptFn: () => Promise<T>,
@@ -212,15 +209,8 @@ async function withPromptLogging<T>(
     });
     return result;
   } catch (err) {
-    // ExitPromptError is thrown by @inquirer/prompts when the user presses Ctrl+C
     if (err instanceof Error && err.name === 'ExitPromptError') {
       logger.debug(`prompt:${name} cancelled`);
-      // @inquirer/prompts leaves stdin in raw mode on Windows after Ctrl+C,
-      // which causes all subsequent prompts to freeze. Restore it explicitly.
-      // pause() (not resume()) so the next prompt initialises its own readline
-      // and keypress handlers before stdin starts flowing — pre-calling resume()
-      // causes the next prompt to receive data before it is ready, which
-      // scrambles the cursor and swallows Ctrl+C.
       try {
         if (process.stdin.isTTY) process.stdin.setRawMode(false);
         process.stdin.pause();
@@ -280,7 +270,7 @@ async function promptRepo(settings: UserSettings) {
   ];
 
   return withPromptLogging('repo-select', () => select({
-    message: `${stepBadge(1, TOTAL_STEPS)} Where would you like to browse components?`,
+    message: `${stepBadge(1, TOTAL_STEPS)} Where would you like to browse artifacts?`,
     choices,
   }), { options: choices.length });
 }
@@ -296,29 +286,29 @@ async function promptCustomUrl() {
   }));
 }
 
-async function fetchComponents(source: RepoSource): Promise<Component[] | null> {
-  const spinner = ora(`Scanning ${theme.cyan(`${source.owner}/${source.repo}`)} for components...`).start();
+async function fetchArtifacts(source: RepoSource): Promise<Artifact[] | null> {
+  const spinner = ora(`Scanning ${theme.cyan(`${source.owner}/${source.repo}`)} for artifacts...`).start();
 
-  let components: Component[];
+  let artifacts: Artifact[];
   try {
-    components = await discoverComponents(source);
+    artifacts = await discoverArtifacts(source);
   } catch (err) {
     const msg = (err as Error).message;
-    logger.error(`fetchComponents threw  source=${source.owner}/${source.repo}  ${msg}`, (err as Error).stack);
+    logger.error(`fetchArtifacts threw  source=${source.owner}/${source.repo}  ${msg}`, (err as Error).stack);
     spinner.fail(`Failed to scan repository: ${msg}`);
     return null;
   }
 
-  if (components.length === 0) {
-    spinner.warn(`No components found in ${theme.cyan(`${source.owner}/${source.repo}`)}`);
-    console.log(theme.muted('  No installable components were found. Try a different repo.'));
+  if (artifacts.length === 0) {
+    spinner.warn(`No artifacts found in ${theme.cyan(`${source.owner}/${source.repo}`)}`);
+    console.log(theme.muted('  No installable artifacts were found. Try a different repo.'));
     return null;
   }
 
-  spinner.succeed(`Found ${theme.brandBold(String(components.length))} components in ${theme.cyan(`${source.owner}/${source.repo}`)}`);
+  spinner.succeed(`Found ${theme.brandBold(String(artifacts.length))} artifacts in ${theme.cyan(`${source.owner}/${source.repo}`)}`);
 
-  const typeCounts = components.reduce((acc, c) => {
-    acc[c.type] = (acc[c.type] || 0) + 1;
+  const typeCounts = artifacts.reduce((acc, a) => {
+    acc[a.type] = (acc[a.type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -328,14 +318,12 @@ async function fetchComponents(source: RepoSource): Promise<Component[] | null> 
     .join('  ');
   console.log('  ' + summary);
 
-  return components;
+  return artifacts;
 }
 
 /**
  * Cooked-mode line input that bypasses @inquirer/core's raw-mode lifecycle.
- * Because it runs in canonical (line-buffered) terminal mode, it's immune to
- * raw-mode state left by the previous prompt on Windows/Node 25.
- * Ctrl+C generates a real SIGINT which we intercept to return BACK.
+ * Immune to raw-mode state left by the previous prompt on Windows/Node 25.
  */
 async function plainLineInput(message: string): Promise<string | typeof BACK> {
   return new Promise<string | typeof BACK>((resolve) => {
@@ -364,31 +352,25 @@ async function plainLineInput(message: string): Promise<string | typeof BACK> {
   });
 }
 
-async function promptComponents(components: Component[]) {
-  const TYPE_ORDER = ['agent', 'instruction', 'prompt', 'skill', 'snippet', 'workflow', 'unknown'];
-  const largeList = components.length > RENDER_MAX;
+async function promptArtifacts(artifacts: Artifact[]) {
+  const TYPE_ORDER = ['agent', 'instruction', 'prompt', 'skill', 'snippet', 'workflow', 'hook', 'mcp-server', 'other'];
+  const largeList = artifacts.length > RENDER_MAX;
 
-  // Outer loop: Ctrl+C in the checkbox returns here so the user can refine
-  // their search rather than being thrown all the way back to repo selection.
   let isRedoSearch = false;
   while (true) {
-    // Clear + reprint header when cycling back from the checkbox so stale
-    // checkbox output doesn't accumulate below the banner.
     if (isRedoSearch) {
       console.clear();
       printHeader();
     }
 
-    // ── Pre-filter step for large lists ────────────────────────────────────
-    let filteredComponents: Component[];
+    let filteredArtifacts: Artifact[];
     if (!largeList) {
-      filteredComponents = components;
+      filteredArtifacts = artifacts;
     } else {
-      logger.debug(`promptComponents pre-filter required  total=${components.length}  max=${RENDER_MAX}`);
+      logger.debug(`promptArtifacts pre-filter required  total=${artifacts.length}  max=${RENDER_MAX}`);
 
-      // Step A: if multiple types exist, allow narrowing by type first.
-      const typeCounts = components.reduce((acc, c) => {
-        acc[c.type] = (acc[c.type] || 0) + 1;
+      const typeCounts = artifacts.reduce((acc, a) => {
+        acc[a.type] = (acc[a.type] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
@@ -397,11 +379,11 @@ async function promptComponents(components: Component[]) {
         ...Object.keys(typeCounts).filter(t => !TYPE_ORDER.includes(t)).sort((a, b) => a.localeCompare(b)),
       ];
 
-      let typeFilteredComponents = components;
+      let typeFilteredArtifacts = artifacts;
       if (presentTypes.length > 1) {
         console.log('');
-        console.log(`  ${theme.brand('Filter by component type:')}`);
-        console.log(`  ${theme.muted('0)')} ${theme.white('All Types')} ${theme.muted(`(${components.length})`)}`);
+        console.log(`  ${theme.brand('Filter by artifact type:')}`);
+        console.log(`  ${theme.muted('0)')} ${theme.white('All Types')} ${theme.muted(`(${artifacts.length})`)}`);
         presentTypes.forEach((t, i) => {
           console.log(`  ${theme.muted(`${i + 1})`)} ${getTypeIcon(t)} ${theme.white(capitalize(t) + 's')} ${theme.muted(`(${typeCounts[t]})`)}`);
         });
@@ -420,54 +402,43 @@ async function promptComponents(components: Component[]) {
         }
 
         if (selectedType !== 'all') {
-          typeFilteredComponents = components.filter(c => c.type === selectedType);
+          typeFilteredArtifacts = artifacts.filter(a => a.type === selectedType);
         }
-
-        logger.debug(`promptComponents type filter selected  type=${selectedType}  remaining=${typeFilteredComponents.length}`);
+        logger.debug(`promptArtifacts type filter selected  type=${selectedType}  remaining=${typeFilteredArtifacts.length}`);
       }
 
-      // Step B: keep existing search logic when we still exceed render cap.
-      if (typeFilteredComponents.length <= RENDER_MAX) {
-        filteredComponents = typeFilteredComponents;
+      if (typeFilteredArtifacts.length <= RENDER_MAX) {
+        filteredArtifacts = typeFilteredArtifacts;
       } else {
-        // Inner loop: re-prompt only when the query matches nothing at all.
         while (true) {
           const message =
             `  ${stepBadge(2, TOTAL_STEPS)} Search ` +
-            theme.muted(`(${typeFilteredComponents.length} available · Enter to browse first ${RENDER_MAX} · Ctrl+C to go back)`) +
+            theme.muted(`(${typeFilteredArtifacts.length} available · Enter to browse first ${RENDER_MAX} · Ctrl+C to go back)`) +
             ': ';
           const filterResult = await plainLineInput(message);
-          logger.debug(`prompt:components-prefilter ${filterResult === BACK ? 'cancelled' : 'answered'}`);
+          logger.debug(`prompt:artifacts-prefilter ${filterResult === BACK ? 'cancelled' : 'answered'}`);
 
           if (filterResult === BACK) return BACK;
 
           const query = (filterResult as string).slice(0, 200);
-          logger.debug(`promptComponents pre-filter query  length=${query.length}`);
-
           if (query === '') {
-            filteredComponents = typeFilteredComponents.slice(0, RENDER_MAX);
-            logger.debug(`promptComponents pre-filter  empty query  using first ${RENDER_MAX}`);
+            filteredArtifacts = typeFilteredArtifacts.slice(0, RENDER_MAX);
             break;
           }
 
-          const matches = typeFilteredComponents.filter(c =>
-            c.name.toLowerCase().includes(query.toLowerCase()) ||
-            (c.description ?? '').toLowerCase().includes(query.toLowerCase())
+          const matches = typeFilteredArtifacts.filter(a =>
+            a.name.toLowerCase().includes(query.toLowerCase()) ||
+            (a.description ?? '').toLowerCase().includes(query.toLowerCase())
           );
 
           if (matches.length === 0) {
-            console.log(theme.warning('  No components match — try a different search term'));
-            logger.debug('promptComponents pre-filter  zero matches  re-prompting');
+            console.log(theme.warning('  No artifacts match — try a different search term'));
             continue;
           }
 
+          filteredArtifacts = matches.length > RENDER_MAX ? matches.slice(0, RENDER_MAX) : matches;
           if (matches.length > RENDER_MAX) {
-            console.log(theme.muted(`  ${matches.length} results — showing first ${RENDER_MAX}. Ctrl+C after the list to refine your search.`));
-            filteredComponents = matches.slice(0, RENDER_MAX);
-            logger.debug(`promptComponents pre-filter  too many matches=${matches.length}  capped at ${RENDER_MAX}`);
-          } else {
-            filteredComponents = matches;
-            logger.debug(`promptComponents pre-filter  matched=${filteredComponents.length}`);
+            console.log(theme.muted(`  ${matches.length} results — showing first ${RENDER_MAX}. Ctrl+C after the list to refine.`));
           }
           break;
         }
@@ -475,10 +446,10 @@ async function promptComponents(components: Component[]) {
     }
 
     // ── Build grouped choices ───────────────────────────────────────────────
-    const grouped = new Map<string, Component[]>();
-    for (const c of filteredComponents) {
-      if (!grouped.has(c.type)) grouped.set(c.type, []);
-      grouped.get(c.type)!.push(c);
+    const grouped = new Map<string, Artifact[]>();
+    for (const a of filteredArtifacts) {
+      if (!grouped.has(a.type)) grouped.set(a.type, []);
+      grouped.get(a.type)!.push(a);
     }
     for (const items of grouped.values()) items.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -487,18 +458,19 @@ async function promptComponents(components: Component[]) {
       ...[...grouped.keys()].filter(t => !TYPE_ORDER.includes(t)),
     ];
 
-    type Choice = Separator | { name: string; value: Component; description?: string };
+    type Choice = Separator | { name: string; value: Artifact; description?: string };
     const choices: Choice[] = [];
     for (const type of orderedTypes) {
       const items = grouped.get(type)!;
       choices.push(new Separator(`${getTypeIcon(type)} ${theme.brandBold(capitalize(type) + 's')} (${items.length})`));
-      for (const c of items) {
-        const tags = c.tags?.slice(0, 3).map(t => tagLabel(t)).join(' ') ?? '';
-        const fileCount = c.files.length > 0 ? theme.muted(`${c.files.length} file${c.files.length > 1 ? 's' : ''}`) : '';
+      for (const a of items) {
+        const tags = a.tags?.slice(0, 3).map(t => tagLabel(t)).join(' ') ?? '';
+        const srcCount = new Set(a.compatibility.flatMap(c => c.files.map(f => f.source))).size;
+        const fileCount = srcCount > 0 ? theme.muted(`${srcCount} file${srcCount > 1 ? 's' : ''}`) : '';
         choices.push({
-          name: [theme.white(c.name), tags, fileCount].filter(Boolean).join('  '),
-          value: c,
-          description: truncate(c.description, 52),
+          name: [theme.white(a.name), tags, fileCount].filter(Boolean).join('  '),
+          value: a,
+          description: truncate(a.description ?? '', 52),
         });
       }
     }
@@ -507,19 +479,18 @@ async function promptComponents(components: Component[]) {
     const selectableCount = choices.filter(c => !(c instanceof Separator)).length;
     const navHint = largeList ? theme.muted('Ctrl+C to refine search') : theme.muted('Ctrl+C to go back');
 
-    logger.debug('promptComponents building options', {
-      totalComponents: filteredComponents.length,
+    logger.debug('promptArtifacts building options', {
+      totalArtifacts: filteredArtifacts.length,
       groupCount: grouped.size,
       byType: Object.fromEntries([...grouped.entries()].map(([t, v]) => [t, v.length])),
     });
-    logger.debug(`promptComponents entering checkbox  total=${choices.length}  headers=${headerCount}  selectable=${selectableCount}`);
 
-    const result = await withPromptLogging('components-checkbox', () => checkbox({
-      message: `${stepBadge(2, TOTAL_STEPS)} Select components to install  ${navHint}`,
+    const result = await withPromptLogging('artifacts-checkbox', () => checkbox({
+      message: `${stepBadge(2, TOTAL_STEPS)} Select artifacts to install  ${navHint}`,
       choices,
       pageSize: 10,
       loop: false,
-      validate: (selected) => selected.length > 0 || 'Select at least one component',
+      validate: (selected) => selected.length > 0 || 'Select at least one artifact',
     }), {
       headers: headerCount,
       selectable: selectableCount,
@@ -527,8 +498,6 @@ async function promptComponents(components: Component[]) {
     });
 
     if (result === BACK) {
-      // Large list: loop back to the search prompt so the user can refine.
-      // Small list: bubble BACK up to the repo step.
       if (largeList) { isRedoSearch = true; continue; }
       return BACK;
     }
@@ -537,15 +506,15 @@ async function promptComponents(components: Component[]) {
   }
 }
 
-async function promptIDE(selectedComponents: Component[]) {
-  const targets = getAvailableTargets(selectedComponents);
-  const choices = targets.map(t => ({
-    name:        `${getIDEIcon(t)} ${theme.white(IDE_DISPLAY_NAMES[t])}`,
+async function promptTool(selectedArtifacts: Artifact[]) {
+  const tools = getAvailableTools(selectedArtifacts);
+  const choices = tools.map(t => ({
+    name:        `${getToolIcon(t)} ${theme.white(IDE_DISPLAY_NAMES[t])}`,
     value:       t,
-    description: IDE_TYPE_HINTS[t],
+    description: TOOL_TYPE_HINTS[t],
   }));
-  return withPromptLogging('ide-select', () => select({
-    message: `${stepBadge(3, TOTAL_STEPS)} Install into which IDE?`,
+  return withPromptLogging('tool-select', () => select({
+    message: `${stepBadge(3, TOTAL_STEPS)} Install into which tool?`,
     choices,
   }), { options: choices.length });
 }
@@ -554,9 +523,9 @@ async function promptScope() {
   const workspaceRoot = findWorkspaceRoot();
   const choices = [
     {
-      name:        `${icons.shield} ${theme.white('User')} ${theme.muted('(global)')}`,
-      value:       'user' as Scope,
-      description: 'Available across all your projects',
+      name:        `${icons.shield} ${theme.white('Global')}`,
+      value:       'global' as Scope,
+      description: 'Available across all your projects (installs to home directory)',
     },
     {
       name:        `${icons.folder} ${theme.white('Workspace')} ${theme.muted('(local)')}`,
@@ -574,18 +543,18 @@ async function promptScope() {
 
 async function promptConfirm(
   source: RepoSource,
-  selectedComponents: Component[],
-  target: TargetIDE,
+  selectedArtifacts: Artifact[],
+  tool: ToolId,
   scope: Scope,
 ) {
   console.log('');
   console.log(theme.brandBold('  Installation Summary'));
 
   const rows: [string, string][] = [
-    ['Components', selectedComponents.map(c => theme.cyan(c.name)).join(theme.muted(', '))],
-    ['Target IDE', `${getIDEIcon(target)} ${IDE_DISPLAY_NAMES[target]}`],
-    ['Scope',      scope === 'user' ? `${icons.shield} User (global)` : `${icons.folder} Workspace`],
-    ['Source',     theme.cyan(`${source.owner}/${source.repo}`)],
+    ['Artifacts', selectedArtifacts.map(a => theme.cyan(a.name)).join(theme.muted(', '))],
+    ['Tool',      `${getToolIcon(tool)} ${IDE_DISPLAY_NAMES[tool]}`],
+    ['Scope',     scope === 'global' ? `${icons.shield} Global` : `${icons.folder} Workspace`],
+    ['Source',    theme.cyan(`${source.owner}/${source.repo}`)],
   ];
   for (const [label, value] of rows) {
     console.log(`  ${theme.muted(label.padEnd(11))} ${value}`);
@@ -596,9 +565,9 @@ async function promptConfirm(
     message: `${stepBadge(5, TOTAL_STEPS)} Proceed with installation?`,
     default: true,
   }), {
-    componentCount: selectedComponents.length,
+    artifactCount: selectedArtifacts.length,
     source: `${source.owner}/${source.repo}`,
-    target,
+    tool,
     scope,
   });
 }
@@ -615,32 +584,33 @@ async function promptContinue() {
 }
 
 async function doInstall(
-  selectedComponents: Component[],
-  target: TargetIDE,
+  selectedArtifacts: Artifact[],
+  tool: ToolId,
   scope: Scope,
+  sourceRepo: string,
 ): Promise<void> {
   const workspaceRoot = findWorkspaceRoot();
   console.log('');
   const results: InstallResult[] = [];
-  const total = selectedComponents.length;
+  const total = selectedArtifacts.length;
 
   for (let i = 0; i < total; i++) {
-    const comp = selectedComponents[i];
+    const artifact = selectedArtifacts[i];
     const progress = theme.muted(`[${i + 1}/${total}]`);
-    const spinner = ora(`${progress} Installing ${theme.cyan(comp.name)}...`).start();
+    const spinner = ora(`${progress} Installing ${theme.cyan(artifact.name)}...`).start();
     try {
-      const result = await installComponent(comp, target, scope, workspaceRoot || undefined);
+      const result = await installComponent(artifact, tool, scope, sourceRepo, workspaceRoot || undefined);
       results.push(result);
       if (result.success) {
-        spinner.succeed(`${progress} ${theme.success(comp.name)} ${theme.muted('installed')}`);
+        spinner.succeed(`${progress} ${theme.success(artifact.name)} ${theme.muted('installed')}`);
       } else {
-        spinner.fail(`${progress} ${theme.error(comp.name)} ${theme.muted('failed:')} ${result.errors.join(', ')}`);
+        spinner.fail(`${progress} ${theme.error(artifact.name)} ${theme.muted('failed:')} ${result.errors.join(', ')}`);
       }
     } catch (err) {
       const msg = (err as Error).message;
-      logger.error(`doInstall caught  component=${comp.name}  ${msg}`, (err as Error).stack);
-      spinner.fail(`${progress} ${theme.error(comp.name)} ${theme.muted('error:')} ${msg}`);
-      results.push({ success: false, component: comp, target, scope, installedFiles: [], errors: [msg] });
+      logger.error(`doInstall caught  artifact=${artifact.id}  ${msg}`, (err as Error).stack);
+      spinner.fail(`${progress} ${theme.error(artifact.name)} ${theme.muted('error:')} ${msg}`);
+      results.push({ success: false, artifact, tool, scope, installedFiles: [], errors: [msg] });
     }
   }
 
@@ -656,7 +626,7 @@ async function doInstall(
 
     console.log(resultBox('Installation Complete', [
       statsLine([
-        { label: `component${successCount > 1 ? 's' : ''} installed`, value: successCount, color: theme.success },
+        { label: `artifact${successCount > 1 ? 's' : ''} installed`, value: successCount, color: theme.success },
         ...(failCount > 0 ? [{ label: 'failed', value: failCount, color: theme.error }] : []),
       ]),
       ...successItems.slice(0, 8),
@@ -666,9 +636,9 @@ async function doInstall(
 
   if (failCount > 0) {
     console.log('');
-    console.log(theme.error(`  ${failCount} component${failCount > 1 ? 's' : ''} failed to install:`));
+    console.log(theme.error(`  ${failCount} artifact${failCount > 1 ? 's' : ''} failed to install:`));
     for (const r of results.filter(r => !r.success)) {
-      console.log(`  ${theme.error('▸')} ${theme.bold(r.component.name)}: ${r.errors.join(', ')}`);
+      console.log(`  ${theme.error('▸')} ${theme.bold(r.artifact.name)}: ${r.errors.join(', ')}`);
     }
   }
 
@@ -691,26 +661,37 @@ function sourcesEqual(a: RepoSource, b: RepoSource | null): boolean {
   return b !== null && a.owner === b.owner && a.repo === b.repo;
 }
 
-function getAvailableTargets(components: Component[]): TargetIDE[] {
-  const all = new Set<TargetIDE>();
-  for (const c of components) for (const t of c.compatibleTargets) all.add(t);
-  const ordered: TargetIDE[] = ['claude-code', 'vscode', 'copilot', 'opencode'];
-  return ordered.filter(t => all.has(t)).concat(ordered.filter(t => !all.has(t)));
+function getAvailableTools(artifacts: Artifact[]): ToolId[] {
+  const all = new Set<ToolId>();
+  for (const a of artifacts) for (const t of getSupportedTools(a)) all.add(t);
+  const ordered: ToolId[] = ['claude-code', 'copilot', 'opencode', 'visual-studio', 'intellij'];
+  return ordered.filter(t => all.has(t)).concat([...all].filter(t => !ordered.includes(t)));
 }
 
-function getIDEIcon(ide: TargetIDE): string {
-  const map: Record<TargetIDE, string> = {
-    'claude-code': '🧠', 'opencode': '💻', 'vscode': '🔷', 'copilot': '🤖',
+function getToolIcon(tool: ToolId): string {
+  const map: Record<ToolId, string> = {
+    'claude-code':   '🧠',
+    'opencode':      '💻',
+    'copilot':       '🤖',
+    'visual-studio': '🔷',
+    'intellij':      '🧩',
   };
-  return map[ide];
+  return map[tool] ?? '🔧';
 }
 
 function getTypeIcon(type: string): string {
-  const icons: Record<string, string> = {
-    skill: '🎯', agent: '🤖', prompt: '💬',
-    instruction: '📋', snippet: '✂️', workflow: '🔄', unknown: '📄',
+  const typeIcons: Record<string, string> = {
+    skill:       '🎯',
+    agent:       '🤖',
+    prompt:      '💬',
+    instruction: '📋',
+    snippet:     '✂️',
+    workflow:    '🔄',
+    hook:        '🪝',
+    'mcp-server': '🔌',
+    other:       '📄',
   };
-  return icons[type] ?? '📄';
+  return typeIcons[type] ?? '📄';
 }
 
 function truncate(s: string, max: number): string {

@@ -1,5 +1,8 @@
 import https from 'node:https';
-import { RepoSource, ComponentFile } from './types.js';
+import { RepoSource } from './types.js';
+
+/** Legacy fetch-result shape; kept for backward compatibility with any callers. */
+interface ComponentFile { path: string; name: string; content?: string; }
 import { logger } from '../utils/logger.js';
 
 interface GitHubTreeItem {
