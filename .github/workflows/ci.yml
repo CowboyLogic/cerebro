@@ -21,7 +21,7 @@ jobs:
           path: cerebro-schema
           # cerebro-schema is a private repo — requires a PAT with repo scope.
           # Store as a repository or organisation secret named GH_PAT.
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.CEREBRO_SCHEMA_READ_TOKEN }}
 
       - name: Checkout cerebro
         uses: actions/checkout@v4
