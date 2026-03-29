@@ -1,5 +1,21 @@
 # AGENTS.md — Ground Rules for AI Coding Agents
 
+## Keeping This File Current
+
+This file, `CLAUDE.md`, and all `.agents/skills/` files in this repo are **living documents**. They exist so any coding agent — Claude Code, GitHub Copilot, or any other — arrives with accurate context and doesn't need to rediscover conventions.
+
+Update them in the same PR as the code change whenever:
+
+- Architecture patterns change (new modules, renamed abstractions, removed layers)
+- Conventions are added or revised
+- Key types, entry points, commands, or security rules change
+- Test fixtures or thresholds change
+- A decision is made that future agents should know about
+
+Do not defer doc updates. A stale `AGENTS.md` is worse than no `AGENTS.md` — it actively misleads.
+
+---
+
 ## Non-Negotiable Rules
 
 1. **Every code change ships with unit tests.** No exceptions. Tests live in `tests/unit/` mirroring the `src/` tree. Run `npm test` (from the project root (`cerebro/`)) before considering any task complete; all 173+ tests must pass.

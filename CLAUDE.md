@@ -64,6 +64,18 @@ Any new code that writes files, calls external APIs, or processes remote input m
 - Do not mock the GitHub API in integration tests — use fixtures or recorded responses
 - Coverage excludes `src/index.ts` and `src/ui/interactive.ts`
 
+## Keeping This File Current
+
+This file is a living document. Update it — in the same PR as the code change — whenever:
+
+- Architecture patterns change (new modules, renamed abstractions, removed layers)
+- Conventions are added or revised (imports, guards, naming rules)
+- Key types, entry points, or security rules change
+- Test setup changes (new fixtures, new categories, changed thresholds)
+- The `.agents/skills/` content diverges from the current codebase
+
+At the end of any significant session, check whether any section here has drifted and update it before closing the PR. The same applies to `AGENTS.md` and all `.agents/skills/` files in this repo.
+
 ## Key Types (src/core/types.ts)
 
 - `ComponentType`: `'skill' | 'agent' | 'prompt' | 'instruction' | 'snippet' | 'workflow' | 'unknown'`
