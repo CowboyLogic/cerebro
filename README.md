@@ -1,28 +1,30 @@
 # Cerebro
 
-![Cerebro](docs/img/cerebro-logo.png)
-
-A suite of tools for discovering and installing AI components — skills, agents, prompts, and instructions — from GitHub repositories directly into your IDE.
+A suite of tools for discovering and installing AI artifacts — skills, agents, prompts, instructions, hooks, and MCP servers — from GitHub repositories directly into your IDE.
 
 Supports **Claude Code**, **VS Code** (Copilot), **OpenCode**, and **Copilot CLI** across Windows, macOS, and Linux.
 
 ---
 
-## What's in this repository
+## Cerebro suite
 
-| Folder | Description |
-|---|---|
-| [`cerebro-cli/`](cerebro-cli/) | The Cerebro CLI application — browse and install AI components from your terminal |
-| [`docs/`](docs/) | Repository-wide documentation: requirements, specifications, and design notes |
+| Repo | Description | Status |
+|------|-------------|--------|
+| **cerebro** (this repo) | CLI installer + suite documentation home | Active |
+| [cerebro-schema](https://github.com/CowboyLogic/cerebro-schema) | Shared JSON Schema, TypeScript types, and AJV validator | Active |
+| [cerebro-vscode-ext](https://github.com/CowboyLogic/cerebro-vscode-ext) | VS Code extension | Active |
+| [cerebro-vs-ext](https://github.com/CowboyLogic/cerebro-vs-ext) | Visual Studio extension | Planned |
+| [cerebro-intellij-ext](https://github.com/CowboyLogic/cerebro-intellij-ext) | IntelliJ IDEA plugin | Planned |
+| [cerebro-eclipse-ext](https://github.com/CowboyLogic/cerebro-eclipse-ext) | Eclipse plugin | Planned |
 
 ---
 
-## Quick Start
+## Quick start
 
-**Requirements**: Node.js 18+
+**Requirements:** Node.js 20+
 
 ```bash
-# Run directly with npx (no install needed)
+# Run directly (no install needed)
 npx cerebro
 
 # Or install globally
@@ -30,7 +32,7 @@ npm install -g .
 cerebro
 ```
 
-Set `GITHUB_TOKEN` to avoid rate limits when browsing large repositories:
+Set `GITHUB_TOKEN` to raise the GitHub API rate limit when browsing large repositories:
 
 ```bash
 export GITHUB_TOKEN=ghp_your_token_here
@@ -38,31 +40,27 @@ export GITHUB_TOKEN=ghp_your_token_here
 
 ---
 
-## Cerebro CLI — Overview
+## CLI reference
 
-The CLI lets you browse any public GitHub repository for AI components and install them with a single command.
-
-### Interactive Mode (default)
+### Interactive mode (default)
 
 ```bash
 cerebro
 ```
 
-Walks you through selecting a repository, browsing components by type, choosing your target IDE, and picking a scope — all in a guided terminal UI.
+Walks you through selecting a repository, browsing artifacts by type, choosing your target IDE, and picking a scope — all in a guided terminal UI.
 
-![Cerebro Main Menu](docs/img/cerebro-main-menu.png)
-
-### Browse & Install
+### Browse & install
 
 ```bash
 # Browse default repositories
 cerebro browse
 
 # Browse a specific repo
-cerebro browse anthropics/skills
+cerebro browse my-org/my-ai-components
 
 # Install by name
-cerebro install brand-guidelines
+cerebro install my-skill
 
 # Specify repo, target, and scope
 cerebro install pdf --repo anthropics/skills --target claude-code --scope user
@@ -71,10 +69,10 @@ cerebro install pdf --repo anthropics/skills --target claude-code --scope user
 cerebro install frontend-design --dry-run
 ```
 
-### Supported IDE Targets
+### Supported targets
 
-| IDE | Flag | Scope: User | Scope: Workspace |
-|---|---|---|---|
+| IDE | Flag | Scope: user | Scope: workspace |
+|-----|------|-------------|-----------------|
 | Claude Code | `claude-code` | `~/.claude/` | `.claude/` |
 | VS Code | `vscode` | OS config dir¹ | `.vscode/` |
 | OpenCode | `opencode` | OS config dir¹ | `.opencode/` |
@@ -82,44 +80,31 @@ cerebro install frontend-design --dry-run
 
 ¹ Windows: `%APPDATA%`, macOS: `~/Library/Application Support`, Linux: `~/.config`
 
-### Default Repositories
+---
 
-| Repository | Contents |
-|---|---|
-| [`github/awesome-copilot`](https://github.com/github/awesome-copilot) | Curated Copilot extensions, agents, and prompts |
-| [`anthropics/skills`](https://github.com/anthropics/skills) | Official Claude Code skills |
+## Catalog format
 
-See [`cerebro-cli/`](cerebro-cli/) for the full CLI reference and developer documentation.
+Artifact repositories publish a `cerebro-catalog.yaml` file at their root. See the [catalog format reference](https://github.com/CowboyLogic/cerebro-schema/blob/main/docs/catalog-format.md).
+
+---
+
+## Workspace setup (contributing)
+
+```bash
+git clone https://github.com/CowboyLogic/cerebro
+node cerebro/bootstrap.js   # clones all sibling repos and installs deps
+```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, conventions, and the development workflow.
 
 ---
 
 ## Documentation
 
-- [Requirements & Specification](docs/requirements.md)
+Suite-level docs live here in `docs/`:
 
----
-
-## Contributing
-
-See [`cerebro-cli/CONTRIBUTING.md`](cerebro-cli/CONTRIBUTING.md) for project setup, architecture, testing conventions, and how to add new IDE targets.
-
----
-
-## License
-
-MIT
-
-```bash
-# Use any GitHub repo
-cerebro browse my-org/my-ai-components
-cerebro install my-skill --repo my-org/my-ai-components --target claude-code
-```
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for project setup, architecture, testing conventions, and how to add new IDE targets.
+- [Architecture Decision Records](docs/adr/) — technical and product decisions that govern all products
+- [Roadmap](memories/roadmap.md) — current work status and backlog
 
 ---
 
