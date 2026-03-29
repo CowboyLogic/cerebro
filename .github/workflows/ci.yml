@@ -10,8 +10,12 @@ on:
 
 jobs:
   build:
-    name: Build & Test
-    runs-on: ubuntu-latest
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout cerebro-schema
@@ -19,8 +23,6 @@ jobs:
         with:
           repository: CowboyLogic/cerebro-schema
           path: cerebro-schema
-          # cerebro-schema is a private repo — requires a PAT with repo scope.
-          # Store as a repository or organisation secret named GH_PAT.
           token: ${{ secrets.CEREBRO_SCHEMA_READ_TOKEN }}
 
       - name: Checkout cerebro
@@ -50,3 +52,16 @@ jobs:
         # Tests are run but failures are informational until the suite is current.
         run: npm test
         continue-on-error: true
+
+  ci:
+    name: Build & Test
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: All matrix legs passed
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "Matrix result: ${{ needs.build.result }}"
+            exit 1
+          fi
