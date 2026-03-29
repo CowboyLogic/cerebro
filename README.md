@@ -110,4 +110,4 @@ Suite-level docs live here in `docs/`:
 
 ## License
 
-MIT
+Apache 2.0
