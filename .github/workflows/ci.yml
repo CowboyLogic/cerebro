@@ -37,6 +37,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: cerebro/package-lock.json
 
+      - name: Install cerebro-schema dependencies
+        working-directory: cerebro-schema
+        run: npm ci
+
       - name: Install dependencies
         working-directory: cerebro
         run: npm ci
