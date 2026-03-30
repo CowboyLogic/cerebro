@@ -41,6 +41,18 @@ cerebro --mcp
 
 The process starts in MCP mode, opens a `StdioServerTransport`, and waits for tool calls. All diagnostic output (startup message, debug logs) MUST be written to `stderr` — `stdout` is reserved exclusively for the JSON-RPC stream.
 
+**Mode detection must happen first.** `src/index.ts` MUST check for the `--mcp` flag before Commander parses any arguments. Commander writes help text and argument validation errors to `stdout` by default — if Commander runs before mode detection, even a malformed invocation could write to `stdout` and corrupt the JSON-RPC stream before the server starts.
+
+Correct pattern:
+```typescript
+// src/index.ts — mode detection BEFORE Commander
+if (process.argv.includes('--mcp')) {
+  runMcpServer().catch(console.error); // catch goes to stderr
+} else {
+  // Commander and all CLI/TUI logic here
+}
+```
+
 ---
 
 ## Agent Registration
@@ -244,6 +256,9 @@ z.object({
 | MCP-REQ-0010 | SHOULD | The server name and version registered with the MCP SDK SHOULD match the package name and version from `package.json`. |
 | MCP-REQ-0011 | MUST | `list_artifacts` MUST apply `filter` and `type` parameters using `fetchCatalog()` with a `CatalogFilter` (SPEC-0005). |
 | MCP-REQ-0012 | MUST | `get_artifact_status` MUST call `resolveInstallBase()` (SPEC-0001) and `getArtifactStatus()` (SPEC-0002) to compute the status. |
+| MCP-REQ-0013 | MUST | The `--mcp` flag MUST be detected in `src/index.ts` before Commander initialises or processes any arguments, and before any output is written to `stdout`. |
+| MCP-REQ-0014 | MUST NOT | Core modules (SPEC-0001 through SPEC-0006) MUST NOT write to `stdout` under any circumstances. Any diagnostic, debug, or informational output from core modules MUST use `stderr` (`console.error`) or be suppressed entirely. Core modules are shared across TUI, CLI, and MCP modes — any `console.log` in a core module will corrupt the MCP JSON-RPC stream. |
+| MCP-REQ-0015 | MUST | Tool handler errors that are expected (network failure, artifact not found, trust required, etc.) MUST be returned as structured content responses with `isError: true` per the MCP SDK pattern — they MUST NOT throw. Unhandled exceptions may become protocol-level MCP errors via the SDK's default handling. |
 
 ---
 

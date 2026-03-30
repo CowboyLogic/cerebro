@@ -232,6 +232,8 @@ Output:
 | CLI-REQ-0010 | MUST | `--filter` MUST apply case-insensitive name matching, consistent with TUI-REQ-0010. |
 | CLI-REQ-0011 | MUST | All commands MUST be implemented using Commander v13. |
 | CLI-REQ-0012 | SHOULD | Successful install output SHOULD include the resolved destination path so the user knows exactly where the artifact landed. |
+| CLI-REQ-0013 | MUST | All error, warning, and diagnostic output MUST be written to `stderr`. `stdout` is reserved for command results (plain text output or JSON). This applies in all output modes, not only `--json`. |
+| CLI-REQ-0014 | MUST | Commander's default help and argument-error output (which goes to `stdout`) is acceptable in CLI mode. It MUST only be reachable after mode detection has confirmed this is not an MCP invocation (see SPEC-0009 MCP-REQ-0013). |
 
 ---
 
