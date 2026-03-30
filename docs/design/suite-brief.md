@@ -91,7 +91,6 @@ A future `@cowboylogic/cerebro-core` package will extract the CLI's core layer (
 
 *(Unresolved questions that need answers before or during implementation.)*
 
-- **Organisation registries:** What does a private/curated registry look like beyond a private GitHub repo? Is there a first-class concept of an "org registry" with its own auth model?
 - **Artifact sets UI:** The schema supports `sets[]` (named collections). How does the TUI and CLI expose set-based install? Deferred to MVP+1.
 
 ---
@@ -104,3 +103,4 @@ A future `@cowboylogic/cerebro-core` package will extract the CLI's core layer (
 - **Update/reinstall behaviour:** ✅ Resolved — Non-destructive by default; status system (Installed/Conflict/Exists) surfaces current state; user must explicitly confirm overwrite. Full update command (detect new version via SHA comparison) is MVP+1.
 - **Artifact versioning:** ✅ Partially resolved — `sourceSha` field reserved in manifest for future update detection. Version pinning deferred to a future release.
 - **Non-GitHub sources:** ✅ Resolved architecturally — `SourceProvider` interface abstracts all source host access. GitLab/Bitbucket providers are explicit MVP+2/+3 backlog items.
+- **Organisation registries:** ✅ Resolved — an "org registry" is a private source repository (GitHub or otherwise) with a `cerebro-catalog.yaml`. No first-class registry concept is needed beyond private repo support (MVP+1). This is in fact a primary motivation for building Cerebro: enabling teams to curate and distribute a standard set of AI tool configurations internally, with the same experience as any public source.
