@@ -53,6 +53,13 @@ export interface InstalledEntry {
   installedPath: string;
   /** ISO 8601 timestamp of when Cerebro installed this artifact. */
   installedAt: string;
+  /**
+   * Git tree SHA of the artifact at time of install (for skills: directory tree SHA;
+   * for instructions: blob SHA). Optional in MVP — populated when available from the
+   * GitHub API response. Reserved for update detection in a future release: compare
+   * this value against the current remote SHA to determine if a newer version exists.
+   */
+  sourceSha?: string;
 }
 
 export interface InstallManifest {
