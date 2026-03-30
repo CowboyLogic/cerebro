@@ -4,7 +4,7 @@
 **Status:** Draft
 **Date:** 2026-03-29
 **Area:** core
-**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0003 (GitHub Client)
+**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0003 (Source Provider)
 **Consumed by:** All TUI screens, CLI mode, MCP mode
 
 ---
@@ -20,7 +20,7 @@ Session state is never persisted between runs — it exists only for the duratio
 ## Scope
 
 **In scope:**
-- Aggregating config, manifest, and GitHub client into a single session object
+- Aggregating config, manifest, and source provider access into a single session object
 - Holding the current target and scope selections (set once per session in TUI mode)
 - Caching catalog fetch results (delegated to the GitHub client cache, surfaced here for convenience)
 - Providing initialisation defaults from config
@@ -39,7 +39,7 @@ Session state is never persisted between runs — it exists only for the duratio
 import type { ToolId, Scope } from '@cowboylogic/cerebro-schema';
 import type { CerebroConfig } from './config.js';
 import type { InstallManifest } from './manifest.js';
-import type { GitHubClient } from './github.js';
+import type { SourceProvider } from './provider.js';
 import type { CatalogResult } from './catalog.js';
 
 export interface Session {
@@ -47,8 +47,13 @@ export interface Session {
   config: CerebroConfig;
   /** Loaded install manifest. */
   manifest: InstallManifest;
-  /** GitHub API client (owns the session-scoped response cache). */
-  github: GitHubClient;
+  /**
+   * Returns the SourceProvider for a given source URL.
+   * Provider instances are created on first use and cached by domain
+   * for the session duration. Throws UnsupportedProviderError for
+   * unrecognised domains.
+   */
+  getProvider(url: string): SourceProvider;
   /**
    * The target tool selected for this session.
    * Null until set by the TUI, CLI args, or MCP call.
@@ -61,7 +66,7 @@ export interface Session {
    */
   scope: Scope | null;
   /**
-   * Catalog results cached by 'owner/repo'.
+   * Catalog results cached by source URL.
    * Populated on first repo visit; reused on return visits within the session.
    */
   catalogCache: Map<string, CatalogResult>;
@@ -69,7 +74,7 @@ export interface Session {
 
 /**
  * Initialise a new session.
- * Loads config and manifest from disk. Creates a fresh GitHub client.
+ * Loads config and manifest from disk. Prepares provider factory.
  * Pre-populates target and scope from config.defaults if present.
  */
 export function createSession(): Session;
@@ -108,7 +113,7 @@ export function updateManifest(session: Session, manifest: InstallManifest): voi
 | ID | Keyword | Requirement |
 |----|---------|-------------|
 | SES-REQ-0001 | MUST | `createSession()` MUST call `loadConfig()` and `loadManifest()` and store the results on the session object. |
-| SES-REQ-0002 | MUST | `createSession()` MUST create a new `GitHubClient` instance (SPEC-0003) and store it on the session. |
+| SES-REQ-0002 | MUST | `createSession()` MUST initialise the provider factory (SPEC-0003 `createProvider`) and expose it via `session.getProvider(url)`. Provider instances MUST be cached by domain for the session duration. |
 | SES-REQ-0003 | MUST | If `config.defaults.target` is set, `createSession()` MUST pre-populate `session.target` with that value. |
 | SES-REQ-0004 | MUST | If `config.defaults.scope` is set, `createSession()` MUST pre-populate `session.scope` with that value. |
 | SES-REQ-0005 | MUST | `setTarget()` with `persist: true` MUST call `saveConfig()` with the updated defaults. |
@@ -134,5 +139,6 @@ Session creation errors are propagated from their originating modules:
 ## Notes
 
 - The session object is a plain mutable object, not a class. This keeps it easy to pass across module boundaries and simple to test.
-- `catalogCache` is intentionally separate from the GitHub client cache. The GitHub client caches raw API responses; the catalog cache stores parsed, validated `CatalogResult` objects that have already been through the catalog module's heuristic or validation logic.
+- `catalogCache` is intentionally separate from the provider's internal response cache. The provider caches raw API responses; the catalog cache stores parsed, validated `CatalogResult` objects that have already been through the catalog module's heuristic or validation logic.
+- `session.getProvider(url)` is the only sanctioned way for catalog and installer modules to obtain a provider. It ensures domain-level caching without those modules needing to manage provider lifecycle directly.
 - `updateManifest()` only updates the in-memory `session.manifest` reference. The Installer (SPEC-0006) is responsible for calling `saveManifest()` after a successful install.
