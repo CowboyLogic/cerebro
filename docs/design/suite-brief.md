@@ -89,9 +89,7 @@ A future `@cowboylogic/cerebro-core` package will extract the CLI's core layer (
 
 ## Open Questions
 
-*(Unresolved questions that need answers before or during implementation.)*
-
-- **Artifact sets UI:** The schema supports `sets[]` (named collections). How does the TUI and CLI expose set-based install? Deferred to MVP+1.
+*(No unresolved questions at this time.)*
 
 ---
 
@@ -104,3 +102,4 @@ A future `@cowboylogic/cerebro-core` package will extract the CLI's core layer (
 - **Artifact versioning:** ✅ Partially resolved — `sourceSha` field reserved in manifest for future update detection. Version pinning deferred to a future release.
 - **Non-GitHub sources:** ✅ Resolved architecturally — `SourceProvider` interface abstracts all source host access. GitLab/Bitbucket providers are explicit MVP+2/+3 backlog items.
 - **Organisation registries:** ✅ Resolved — an "org registry" is a private source repository (GitHub or otherwise) with a `cerebro-catalog.yaml`. No first-class registry concept is needed beyond private repo support (MVP+1). This is in fact a primary motivation for building Cerebro: enabling teams to curate and distribute a standard set of AI tool configurations internally, with the same experience as any public source.
+- **Artifact sets:** ✅ Resolved — single-repo sets (MVP+1); cross-repo/multi-repo sets (future). Schema already supports same-catalog sets via `ArtifactSet` / `sets[]`. MVP+1 adds TUI browsing, CLI `--set` flag, and MCP `install_set` tool. Cross-catalog set references deferred until single-repo sets prove adoption.
