@@ -197,7 +197,10 @@ export async function installArtifact(
       installedAt: new Date().toISOString(),
     };
     const updatedManifest = recordInstall(manifest, entry);
-    saveManifest(updatedManifest);
+    // Mutate in place so the session's in-memory manifest stays consistent
+    // (same pattern used in getArtifactStatus for stale-entry cleanup)
+    manifest.installed.splice(0, manifest.installed.length, ...updatedManifest.installed);
+    saveManifest(manifest);
 
     return { status: 'success', installedPath };
   } catch (err) {

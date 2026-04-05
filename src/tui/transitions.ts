@@ -14,7 +14,7 @@ import type { CatalogResult } from '../core/catalog.js';
 // Constants (shared with screens.tsx for rendering)
 // ---------------------------------------------------------------------------
 
-export const PAGE_SIZE = 50;
+export const PAGE_SIZE = 10;
 
 export const MVP_TARGETS = [
   { id: 'agents' as const,      label: 'agents          (.agents standard)' },

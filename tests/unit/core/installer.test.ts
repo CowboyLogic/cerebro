@@ -424,6 +424,29 @@ describe('installArtifact — manifest recording', () => {
     const [, entry] = mockRecordInstall.mock.calls[0];
     expect(entry.sourceUrl).toBe('https://github.com/anthropics/skills');
   });
+
+  it('INS-REQ-0010: mutates manifest.installed in-place so callers see the update immediately', async () => {
+    const manifest = makeManifest(); // starts empty
+    const newEntry = {
+      id: 'git-commit-assistant', name: 'Git Commit Assistant',
+      type: 'skill', sourceUrl: 'https://github.com/anthropics/skills',
+      target: 'claude-code', scope: 'workspace',
+      installedPath: '/projects/.claude/commands/git-commit-assistant',
+      installedAt: '2026-01-01T00:00:00.000Z',
+    };
+    // Return a *new* object so we can tell whether manifest was mutated in place
+    mockRecordInstall.mockReturnValue({ installed: [newEntry] });
+
+    const { installArtifact } = await import('../../../src/core/installer.js');
+    await installArtifact(
+      makeSkillArtifact(), 'anthropics', 'skills', 'claude-code', 'workspace',
+      makeConfig(), manifest, makeProvider(), { overwrite: false },
+    );
+
+    // The original manifest object must be mutated — same reference, new contents
+    expect(manifest.installed).toHaveLength(1);
+    expect(manifest.installed[0]).toBe(newEntry);
+  });
 });
 
 // ---------------------------------------------------------------------------

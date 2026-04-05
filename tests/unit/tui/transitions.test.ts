@@ -353,8 +353,8 @@ describe('item-list — cursor', () => {
 // ---------------------------------------------------------------------------
 
 describe('item-list — pagination', () => {
-  it('TUI-REQ-0007: PAGE_SIZE is 50', () => {
-    expect(PAGE_SIZE).toBe(50);
+  it('TUI-REQ-0007: PAGE_SIZE fits within a standard terminal window (max 10)', () => {
+    expect(PAGE_SIZE).toBe(10);
   });
 
   it('TUI-REQ-0008: spacebar advances to next page', () => {
