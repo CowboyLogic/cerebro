@@ -57,7 +57,7 @@ export function Banner({ session, authSource }: BannerProps) {
   const defaultText = target && scope ? `${target} · ${scope}` : 'not set';
 
   return (
-    <Box flexDirection="row" borderBottom borderBottomColor="#7C3AED">
+    <Box flexDirection="row" borderStyle="double" borderColor="#7C3AED">
       {/* Left pane — TUI-REQ-0021: 6 rows of coloured ASCII art */}
       <Box flexDirection="column">
         {Array.from({ length: 6 }, (_, row) => (

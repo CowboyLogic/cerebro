@@ -314,7 +314,7 @@ Activated from "Add custom source…" in the Repo List.
 | TUI-REQ-0021 | MUST | The left pane MUST render exactly six rows of coloured ASCII art. Each row MUST be a `<Box flexDirection="row">` containing seven `<Text bold>` children with colours from `ART_COLORS`. |
 | TUI-REQ-0022 | MUST | The right pane MUST display, in order: tagline, blank line, version, auth source, enabled-source count, and default target·scope (or "not set"). |
 | TUI-REQ-0023 | MUST | The auth label in the right pane MUST be obtained from `resolveGitHubTokenSource()` (SPEC-0003 PRV-REQ-0018). It MUST display the source name only — never the token value. |
-| TUI-REQ-0024 | MUST | The outer `<Banner>` wrapper MUST apply a bottom border in colour `#7C3AED` (`borderBottom borderBottomColor="#7C3AED"`). No blank padding rows above or below the art are permitted; total height MUST be six rows. |
+| TUI-REQ-0024 | MUST | The outer `<Banner>` wrapper MUST apply a single-line border on all four sides in colour `#7C3AED` (`borderStyle="single" borderColor="#7C3AED"`). No blank padding rows above or below the art are permitted; total height MUST be six rows. |
 | TUI-REQ-0025 | MUST | `runTui()` MUST call `resolveGitHubTokenSource()` once at startup and pass the result to `<Banner>` as `authSource`. |
 
 ---
