@@ -29,7 +29,7 @@ Cerebro operates as a standalone Node.js CLI application. It communicates with t
 | **Component** | A discrete, installable AI artefact: skill, agent, prompt, instruction, snippet, or workflow |
 | **Target IDE** | The IDE into which a component is installed: Claude Code, VS Code, OpenCode, or Copilot CLI |
 | **Scope** | Where a component is installed: `user` (global) or `workspace` (project-local) |
-| **Manifest** | A `cerebro.json` file at a repo's root that explicitly declares its components |
+| **Catalog** | A `cerebro-catalog.yaml` file at a repo's root that explicitly declares its artifacts |
 | **Heuristic discovery** | Fallback component detection based on directory layout and filename patterns |
 | **Dry-run** | A preview mode that computes install paths without writing any files |
 
@@ -62,7 +62,7 @@ flowchart LR
 |---|---|
 | **Interactive user** | Runs `cerebro` with no arguments; navigates the guided TUI wizard |
 | **CLI user** | Runs `cerebro browse` / `cerebro install` in scripts or pipelines |
-| **Repository author** | Publishes a `cerebro.json` manifest so their repo is fully discoverable |
+| **Repository author** | Publishes a `cerebro-catalog.yaml` so their repo is fully and precisely discoverable |
 
 ---
 
@@ -104,11 +104,12 @@ The system MUST support two scopes per install:
 
 ### 3.4 Component Discovery
 
-#### 3.4.1 Manifest-based discovery (primary)
+#### 3.4.1 Catalog-based discovery (primary)
 
-- The system MUST attempt to load `cerebro.json` from the root of a GitHub repository before performing heuristic discovery.
-- The manifest MUST be validated against the schema defined in §4.1.
-- If the manifest is absent, fails to parse, or contains zero valid components after validation, the system MUST fall back to heuristic discovery.
+- The system MUST attempt to fetch and validate `cerebro-catalog.yaml` (fallback: `cerebro-catalog.yml`) from the root of a GitHub repository before performing heuristic discovery.
+- The catalog MUST be validated using `validateCatalog()` from `@cowboylogic/cerebro-schema`.
+- If the catalog is absent (HTTP 404), fails to parse, or contains zero valid artifacts after validation, the system MUST fall back to heuristic discovery.
+- A non-404 fetch error MUST propagate as an error; it MUST NOT silently trigger the heuristic fallback.
 
 #### 3.4.2 Heuristic discovery (fallback)
 
@@ -268,33 +269,39 @@ All installed files MUST be prepended with an HTML comment identifying the sourc
 
 ## 4. Data Requirements
 
-### 4.1 `cerebro.json` Manifest Schema
+### 4.1 `cerebro-catalog.yaml` Catalog Schema
 
-```jsonc
-{
-  "cerebro": "1",           // Schema version (string, required)
-  "name": "my-repo",        // Repository display name (string, optional)
-  "description": "...",     // Repository description (string, optional)
-  "components": [
-    {
-      "name": "code-review",               // Required; will be sanitized on load
-      "type": "agent",                     // Required; one of the valid ComponentType values
-      "description": "...",               // Optional; max 200 characters
-      "files": ["agents/code-review.agent.md"],  // Required; relative paths only
-      "targets": ["claude-code", "opencode"],    // Optional; inferred from type if omitted
-      "tags": ["review", "quality"]              // Optional; each tag capped at 50 characters
-    }
-  ]
-}
+```yaml
+cerebro: "1"          # format version (string, required)
+name: my-repo         # repository display name (string, optional)
+description: "..."    # repository description (string, optional)
+artifacts:            # required; at least one entry after validation
+  - id: code-review                   # required; slug matching ^[a-z0-9][a-z0-9-]*[a-z0-9]$
+    name: Code Review                 # required display name
+    type: agent                       # required; one of the valid ArtifactType values
+    description: "..."                # optional; max 200 characters
+    tags: [review, quality]           # optional; each tag capped at 50 characters
+    compatibility:
+      - tool: claude-code             # required; one of the valid ToolId values
+        scope: [workspace, global]    # required
+        files:
+          - source: agents/code-review.agent.md   # repo-relative path; no .. or absolute paths
+            target: agents/code-review.agent.md   # install-relative path
 ```
 
+Valid `type` values: `skill | agent | prompt | instruction | snippet | workflow | mcp-server | hook | other`
+
+Valid `tool` values: `claude-code | copilot | opencode | visual-studio | intellij`
+
+Valid `scope` values: `workspace | global`
+
 Validation rules:
-- `components` MUST be a non-empty array.
-- Each component MUST have a non-empty `name` string and a valid `type`.
-- Each component MUST declare at least one valid file path.
-- File paths MUST NOT be absolute or contain `..` segments.
-- Any component with zero valid files after path-safety filtering is silently dropped.
-- A manifest that yields zero valid components after filtering causes fallback to heuristic discovery.
+- `artifacts` MUST be a non-empty array after validation.
+- Each artifact MUST have a non-empty `id` matching the slug pattern and a valid `type`.
+- Each artifact MUST declare at least one `compatibility` entry with at least one file.
+- `source` and `target` file paths MUST NOT be absolute or contain `..` segments.
+- A catalog that yields zero valid artifacts after validation causes fallback to heuristic discovery.
+- Validation is performed by `validateCatalog()` from `@cowboylogic/cerebro-schema`; do not implement local validation.
 
 ### 4.2 User Settings Schema
 
@@ -343,7 +350,7 @@ Constraints:
 ### 5.5 Test Coverage
 
 - All code changes MUST ship with unit tests in `tests/unit/` mirroring the `src/` directory structure.
-- The full test suite (`npm test`) MUST pass with all 173+ tests green before any commit is merged.
+- The full test suite (`npm test`) MUST pass with all 304+ tests green before any commit is merged.
 - Coverage thresholds: **75% lines/functions**, **70% branches** (enforced via `vitest --coverage`).
 - `src/index.ts` and `src/ui/interactive.ts` are excluded from coverage enforcement.
 
@@ -357,7 +364,7 @@ Three non-negotiable defence layers MUST be maintained for all code that touches
 
 - **Location:** `src/core/github.ts` → `validateGitHubIdentifiers()`
 - MUST reject any `owner` or `repo` string that does not conform to GitHub's naming rules (alphanumeric characters, hyphens, and underscores; no path characters) before any network call is made.
-- This validation MUST be applied to repository identifiers parsed from CLI arguments, `cerebro.json` content, and the settings file.
+- This validation MUST be applied to repository identifiers parsed from CLI arguments, `cerebro-catalog.yaml` content, and the settings file.
 
 ### 6.2 Name Sanitization
 
@@ -379,11 +386,11 @@ Three non-negotiable defence layers MUST be maintained for all code that touches
 - All loaded `owner/repo` pairs MUST be re-validated through `parseRepoUrl()`.
 - Custom repo list capped at 20 entries.
 
-### 6.5 Manifest File Hardening
+### 6.5 Catalog File Hardening
 
-- All file paths in `components[].files` MUST be validated to exclude `..` traversal and absolute paths.
-- Component names MUST be sanitized via `sanitizeName()`.
+- All `source` and `target` file paths in `artifacts[].compatibility[].files` MUST be validated to exclude `..` traversal and absolute paths.
 - Description fields MUST be truncated to 200 characters; tags to 50 characters each.
+- Catalog content MUST be validated via `validateCatalog()` from `@cowboylogic/cerebro-schema` before use.
 
 ### 6.6 General Principles
 

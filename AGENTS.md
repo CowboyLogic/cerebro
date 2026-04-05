@@ -18,7 +18,7 @@ Do not defer doc updates. A stale `AGENTS.md` is worse than no `AGENTS.md` — i
 
 ## Non-Negotiable Rules
 
-1. **Every code change ships with unit tests.** No exceptions. Tests live in `tests/unit/` mirroring the `src/` tree. Run `npm test` (from the project root (`cerebro/`)) before considering any task complete; all 173+ tests must pass.
+1. **Every code change ships with unit tests.** No exceptions. Tests live in `tests/unit/` mirroring the `src/` tree. Run `npm test` (from the project root (`cerebro/`)) before considering any task complete; all 270+ tests must pass.
 
 2. **Every code change requires an open GitHub issue.** Before writing code, confirm a matching issue exists at `https://github.com/CowboyLogic/cerebro/issues`. Post progress updates on that issue during development (at minimum: started, approach chosen, done). Do not open a PR without linking it to the issue.
 
@@ -30,32 +30,37 @@ Do not defer doc updates. A stale `AGENTS.md` is worse than no `AGENTS.md` — i
 
 ```
 src/
-  index.ts              # CLI entry point (Commander); guarded by !process.env.VITEST
+  index.ts              # CLI entry point (Commander); also detects --mcp flag before Commander
   core/
-    types.ts            # Shared types: Component, InstallOptions, RepoSource, etc.
-    github.ts           # GitHub API client; validates owner/repo identifiers
-    registry.ts         # Component discovery; sanitizes component names
-    installer.ts        # Orchestrates install across targets
-    settings.ts         # Persistent user settings (~/.config/cerebro/user-settings.json)
-  targets/
-    base.ts             # BaseInstaller with assertConfined() path-confinement guard
-    claude-code.ts      # Claude Code installer
-    opencode.ts         # OpenCode installer
-    vscode.ts           # VS Code installer
-    copilot.ts          # Copilot CLI installer
-    index.ts            # Target registry
-  ui/
-    interactive.ts      # Clack-based wizard (state machine; step navigation)
-  utils/
-    platform.ts         # OS detection; getUserConfigDir() per platform
-    paths.ts            # findWorkspaceRoot(), ensureDir(), IDE path map
-    theme.ts            # Chalk theme, icons, banner, resultBox, stepBadge, etc.
+    catalog.ts          # Fetches artifact catalog; only 404 falls back to heuristic (non-404 propagates)
+    config.ts           # CerebroConfig helpers: addSource, trustSource, resolveInstallBase
+    installer.ts        # Orchestrates artifact installation across targets
+    manifest.ts         # InstallManifest: tracks what is installed; getArtifactStatus
+    provider.ts         # SourceProvider interface; parseRepoUrl; createProvider
+    session.ts          # Session creation: createSession, setTarget, setScope
+    types.ts            # Shared types
+  cli/
+    install.ts          # `cerebro install` command; --persist uses setTarget/setScope
+    sources.ts          # `cerebro sources` command; session.config = addSource(...) (return value used)
+  mcp/
+    server.ts           # MCP server (SPEC-0009); exports runMcpServer(); activated by --mcp flag
+                        # Registers 5 tools: list_sources, list_artifacts, get_artifact_status,
+                        #   install_artifact, add_source
+                        # Uses @modelcontextprotocol/sdk McpServer + StdioServerTransport
+                        # All diagnostic output → stderr; stdout reserved for JSON-RPC stream
+  tui/
+    app.tsx             # Top-level TUI app; wires AddSource props (onRequestValidate / onAdd split)
+                        # Contains inlined banner() function (raw ANSI, no chalk dependency)
+    screens.tsx         # Individual screen components; AddSource uses parseRepoUrl() for validation
+                        # and accepts pasted/multi-char input (input.length >= 1)
 
 tests/
-  unit/                 # Fast, fs-mocked unit tests
-  integration/          # Tests that exercise real file I/O
-  cli/                  # End-to-end CLI invocation tests
-  __fixtures__/         # Shared test helpers (makeComponent, etc.)
+  unit/                 # Fast, fs-mocked unit tests (mirrors src/)
+    core/               # catalog.test.ts, config.test.ts, …
+    cli/                # install.test.ts, sources.test.ts
+    mcp/                # server.test.ts — uses vi.hoisted() for constructable MockMcpServer spy
+    tui/                # screens.test.tsx, app.test.tsx
+  __fixtures__/         # Shared test helpers
 ```
 
 ---
@@ -64,12 +69,15 @@ tests/
 
 | Concern | Choice |
 |---|---|
-| Runtime | Node.js 20.12+ (ESM, `"type": "module"`) |
-| Language | TypeScript 5.x |
-| Dev execution | `tsx` (esbuild-based — see gotchas below) |
+| Runtime | Node.js 20+ (ESM, `"type": "module"`) |
+| Language | TypeScript 5.7 |
 | CLI framework | Commander v13 |
-| Prompts | `@clack/prompts` v1.1.0 |
-| Styling | chalk v5 |
+| TUI | Ink 6 + React 19 |
+| GitHub API | @octokit/rest 22 |
+| Config format | js-yaml 4 |
+| Schema | @cowboylogic/cerebro-schema (local sibling package) |
+| MCP | @modelcontextprotocol/sdk ^1.29.0 |
+| Validation | zod ^4.3.6 (named export: `import { z } from 'zod'`) |
 | Test runner | Vitest 4.x |
 
 ---
@@ -90,35 +98,70 @@ When adding new code that writes files, calls external APIs, or processes user/r
 
 ---
 
-## cerebro.json Manifest
+## MCP Mode (SPEC-0009)
 
-Repos can place a `cerebro.json` at their root to declare an authoritative component list. Cerebro checks for it first; if absent or invalid it falls back to heuristic discovery.
+Activated when `--mcp` is present in `process.argv`. Detected in `src/index.ts` **before** Commander runs, using dynamic imports to branch cleanly.
 
-**Schema:**
+- `runMcpServer()` in `src/mcp/server.ts` creates a `McpServer` (name: `cerebro`, version: `0.1.0`) and connects via `StdioServerTransport`.
+- All diagnostic output goes to **stderr**. stdout is reserved for the JSON-RPC stream.
+- Startup errors from `createSession()` (`ConfigParseError`, `ManifestParseError`) are logged to stderr and `process.exit(1)`.
+- Tool input schemas use Zod raw shapes (plain objects with `z.*` fields, **not** `z.object(...)`).
 
-```jsonc
-{
-  "cerebro": "1",            // schema version (string, required)
-  "name": "my-repo",         // optional display name
-  "description": "...",      // optional
-  "components": [
-    {
-      "name": "code-review",         // required, sanitized on load
-      "type": "agent",               // required: skill | agent | prompt | instruction | snippet | workflow | unknown
-      "description": "...",          // optional, max 200 chars
-      "files": ["agents/code-review.agent.md"],  // required, relative paths only
-      "targets": ["claude-code", "opencode"],    // optional; inferred from type if omitted
-      "tags": ["review", "quality"]              // optional
-    }
-  ]
-}
+**5 registered tools:** `list_sources`, `list_artifacts`, `get_artifact_status`, `install_artifact`, `add_source`
+
+---
+
+## Known Test Gotchas
+
+### Vitest mock constructors (`vi.hoisted`)
+
+`vi.mock()` factories are hoisted before module-level variable declarations. Any variable needed inside a `vi.mock()` factory **must** be created with `vi.hoisted()`:
+
+```ts
+const { MockFoo } = vi.hoisted(() => {
+  const MockFoo = vi.fn(function MockFoo(this: any) { return mockFooInstance; });
+  return { MockFoo };
+});
+vi.mock('some-module', () => ({ Foo: MockFoo }));
 ```
 
-**Valid types:** `skill`, `agent`, `prompt`, `instruction`, `snippet`, `workflow`, `unknown`
+Use a **regular function** (not arrow) as the `vi.fn()` implementation so it is newable as a constructor. When a constructor returns an object, `new Foo()` yields that object.
 
-**Valid targets:** `claude-code`, `opencode`, `vscode`, `copilot`
+### Ink `useInput` and multi-character input
 
-**Security:** `validateManifest()` in `src/core/registry.ts` rejects any file path containing `..` or an absolute path. `sanitizeName()` is applied to all component names. Components with no valid files after validation are silently dropped. A manifest with zero valid components causes fallback to heuristic discovery.
+`ink-testing-library`'s `stdin.write(str)` emits `str` as a **single** data event. Ink parses the whole string as one keypress with `input = str` (not char by char). The `useInput` handler is called once with the entire string. Therefore:
+
+- Handle `input.length >= 1` (not just `=== 1`) for text accumulation in TUI components.
+- Use a `useRef` mirroring URL/text state so the `isSubmit` handler always reads the current value, even within the same React render cycle.
+
+---
+
+
+## `cerebro-catalog.yaml` Catalog Format
+
+Repos can place a `cerebro-catalog.yaml` at their root to declare their artifacts explicitly. Cerebro checks for it first (fallback filename: `cerebro-catalog.yml`); if absent or invalid it falls back to heuristic discovery. The schema is defined by `@cowboylogic/cerebro-schema` and validated with `validateCatalog()` — do not duplicate or redefine catalog types locally.
+
+**Schema (excerpt):**
+
+```yaml
+cerebro: "1"          # format version (string, required)
+name: my-repo         # optional display name
+description: "..."    # optional
+artifacts:
+  - id: code-review                 # required; lowercase slug ^[a-z0-9][a-z0-9-]*[a-z0-9]$
+    name: Code Review               # required display name
+    type: agent                     # required: skill | agent | prompt | instruction | snippet | workflow | mcp-server | hook | other
+    description: "..."              # optional
+    tags: [review, quality]         # optional
+    compatibility:
+      - tool: claude-code           # required: claude-code | copilot | opencode | visual-studio | intellij
+        scope: [workspace, global]  # required
+        files:
+          - source: agents/code-review.agent.md   # repo-relative path
+            target: agents/code-review.agent.md   # install-relative path
+```
+
+**If `cerebro-catalog.yaml` is absent, invalid, or yields zero artifacts** after `validateCatalog()`, `fetchCatalog()` in `src/core/catalog.ts` falls back to heuristic scanning. A non-404 fetch error propagates — only 404 triggers the fallback.
 
 ---
 

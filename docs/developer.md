@@ -95,7 +95,7 @@ cerebro-cli/
 
 ### Component Discovery
 
-`src/core/registry.ts` first looks for a `cerebro.json` manifest at the repo root. If absent or invalid it falls back to heuristic tree-walking: directory-marker files (`SKILL.md`, `agent.yaml`, …) and flat collection directories (`skills/`, `agents/`, `prompts/`, …).
+`src/core/catalog.ts` attempts to fetch and validate `cerebro-catalog.yaml` from the repo root (validated by `validateCatalog()` from `@cowboylogic/cerebro-schema`). If the file is absent or invalid it falls back to heuristic tree-walking: directory-marker files (`SKILL.md`, `agent.yaml`, …) and flat collection directories (`skills/`, `agents/`, `prompts/`, …). A non-404 fetch error propagates; only 404 triggers the heuristic fallback.
 
 ### Installation
 

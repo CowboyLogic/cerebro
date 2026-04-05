@@ -4,48 +4,79 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-Cerebro is a cross-platform CLI tool that discovers and installs AI components (skills, agents, prompts, instructions, snippets, workflows) from GitHub repositories into IDEs. Supported targets: Claude Code, VS Code (Copilot), OpenCode, and Copilot CLI.
+Cerebro is a cross-platform CLI tool that discovers and installs AI artifacts (skills, instructions, agents, prompts, snippets, workflows) from GitHub repositories into AI-enabled IDEs and tools. Supported targets (MVP): Claude Code, GitHub Copilot (VS Code), and the `.agents` standard.
 
 ## Commands
 
 All commands must be run from the project root:
 
 ```bash
-npm start              # Run interactive mode (tsx src/index.ts)
+npm start              # Run TUI mode (tsx src/index.ts)
 npm run dev            # Watch mode
 npm run build          # Compile TypeScript to dist/
 
-npm test               # Run all tests (173+), must pass before any PR
+npm test               # Run all tests (280+), must pass before any PR
 npm run test:unit      # Unit tests only
-npm run test:integration  # Integration tests only
-npm run test:cli       # CLI end-to-end tests
 npm run test:watch     # Watch mode
 npm run test:coverage  # Coverage report (thresholds: 75% lines/functions, 70% branches)
 ```
 
-Run a single test file: `npx vitest run tests/unit/core/registry.test.ts`
+Run a single test file: `npx vitest run tests/unit/core/config.test.ts`
 
 ## Architecture
 
-**Data flow:** CLI entry → interactive wizard → component discovery → GitHub fetch → target installer → file placement.
+**Three execution modes, one core engine.**
 
-Three core pipelines:
+All modes call into `src/core/` exclusively. No business logic lives in `src/tui/`, `src/cli/`, or `src/mcp/`.
 
-1. **Discovery** (`src/core/registry.ts`): Loads `cerebro.json` manifest from repo root. Falls back to heuristic tree-walking (directory markers like `SKILL.md`, `agent.yaml`, or flat collections in `skills/`, `agents/`, etc.).
+```text
+src/index.ts          ← entry point; detects --mcp before Commander runs
+├── src/tui/          ← TUI mode  (cerebro, no args) — Ink-based interactive UI
+├── src/cli/          ← CLI mode  (cerebro install …) — parameterised, scriptable
+├── src/mcp/          ← MCP mode  (cerebro --mcp)    — stdio JSON-RPC server
+└── src/core/         ← shared engine (all modes delegate here)
+    ├── config.ts     SPEC-0001 — config manager (~/.config/cerebro/config.yaml)
+    ├── manifest.ts   SPEC-0002 — install manifest (~/.config/cerebro/installed.yaml)
+    ├── provider.ts   SPEC-0003 — SourceProvider interface + GitHubProvider
+    ├── session.ts    SPEC-0004 — createSession() entry point for all modes
+    ├── catalog.ts    SPEC-0005 — catalog-first + heuristic-fallback discovery
+    └── installer.ts  SPEC-0006 — installArtifact() orchestration
+```
 
-2. **Installation** (`src/core/installer.ts`): Orchestrates fetching file contents from GitHub and delegates to the appropriate target installer.
+### Mode detection
 
-3. **Target installers** (`src/targets/*.ts`): Each IDE target extends `BaseInstaller` which enforces path confinement via `assertConfined()`. Targets handle IDE-specific file placement, naming, and content transformation (e.g., VS Code appends to `copilot-instructions.md`, Claude Code writes to `skills/<name>/`).
+`src/index.ts` checks for `--mcp` **before** Commander initialises. Commander writes help/errors to stdout — if it ran first it would corrupt the JSON-RPC stream.
 
-The interactive wizard (`src/ui/interactive.ts`) is a 5-step state machine: repo selection → component discovery → IDE target → scope (user/workspace) → confirm & install.
+### Core entry point
+
+`createSession()` (`src/core/session.ts`) is the shared entry point for all three modes. Call it first; everything else flows from the session object it returns.
+
+### Discovery (SPEC-0005)
+
+`fetchCatalog()` attempts to load and validate `cerebro-catalog.yaml` from the repo root (schema from `@cowboylogic/cerebro-schema`). Falls back to heuristic tree-walking when the file is absent or invalid.
+
+### Installation (SPEC-0006)
+
+`installArtifact()` **never throws** — always returns an `InstallOutcome`. Callers check `outcome.status`, never try/catch.
+
+### Provider abstraction (SPEC-0003)
+
+`createProvider(url)` detects the provider from the URL domain. MVP ships `GitHubProvider`. No module outside `provider.ts` has knowledge of GitHub-specific APIs. Adding a new host (GitLab, Bitbucket) means implementing `SourceProvider` and registering the domain — zero changes to catalog, installer, session, TUI, CLI, or MCP.
+
+### Config and manifest paths
+
+- Config: `~/.config/cerebro/config.yaml` (created from bundled defaults on first run)
+- Manifest: `~/.config/cerebro/installed.yaml`
 
 ## Security — Three Non-Negotiable Layers
 
-1. **Input validation** (`src/core/github.ts` → `validateGitHubIdentifiers()`): Regex-checks owner/repo before any network call.
-2. **Name sanitization** (`src/core/registry.ts` → `sanitizeName()`): Strips `..`, path separators, non-printable chars from component names.
-3. **Path confinement** (`src/targets/base.ts` → `assertConfined()`): `path.resolve()` on every write target; throws if it escapes the install directory.
+1. **Input validation** (`src/core/provider.ts` → `parseRepoUrl()` / `validateGitHubIdentifiers()`): Regex-checks owner/repo before any network call.
+2. **Name sanitization** (`src/core/catalog.ts`): Strips `..`, path separators, and non-printable characters from artifact names and paths.
+3. **Path confinement** (`src/core/installer.ts` → `assertConfined()`): `path.resolve()` on every write target; throws if it escapes the install base directory.
 
 Any new code that writes files, calls external APIs, or processes remote input must follow this pattern.
+
+**MCP stdout rule (MCP-REQ-0003 / MCP-REQ-0014):** Core modules MUST NOT write to `stdout` under any circumstances. `stdout` is reserved for the JSON-RPC stream in MCP mode. All diagnostic output must use `stderr` (`console.error`) or be suppressed.
 
 ## Coding Conventions
 
@@ -53,16 +84,50 @@ Any new code that writes files, calls external APIs, or processes remote input m
 - **ESM extensions** required on all imports: `import { foo } from './bar.js'`
 - **`const enum` is banned** — tsx/esbuild doesn't inline them. Use `const obj = { ... } as const`
 - **Entry-point guard**: `if (!process.env.VITEST)` gates `program.parseAsync()` in `src/index.ts`
-- **New IDE targets** must extend `BaseInstaller` and call `assertConfined()` before every `writeFileSync`
 - **Platform paths**: Use `getUserConfigDir()` from `src/utils/platform.ts` for cross-platform config directories
+- **Types from schema**: `ArtifactType`, `ToolId`, `Scope`, `Artifact` all come from `@cowboylogic/cerebro-schema`. Do not re-declare them locally.
+
+### TUI conventions (CLI-0002)
+
+The TUI uses a centralized state machine. These rules are non-negotiable:
+
+- **`screens.tsx` components MUST NOT call `useInput`** — keyboard handling belongs exclusively in `app.tsx` via a single `useInput` that dispatches to `handleKey()` in `transitions.ts`.
+- **`screens.tsx` components MUST NOT call `useState` for cursor or navigation state** — all cursor positions, active screen, filter text, and sub-screen stages live in `TuiState` (`types.ts`).
+- **`transitions.ts` MUST have no Ink import** — it is a pure TypeScript module: `handleKey(state: TuiState, key: KeyEvent): TuiState`. No JSX, no side effects.
+- **All navigation logic lives in `transitions.ts`** — screen transitions, cursor movement, filter clearing, sub-screen stage changes. If it changes `TuiState`, it belongs here.
+- Screen components are pure render functions: given props in, JSX out.
+
+Verify compliance at any time:
+
+```bash
+grep -r "useInput" src/tui/        # must return only app.tsx
+grep "useState" src/tui/screens.tsx  # must return zero results
+```
+
+**Why:** Distributed `useInput` in screen components makes navigation logic untestable without Ink's async event system. The centralized model makes every navigation requirement in SPEC-0007 testable as a plain synchronous call to `handleKey()`. See `docs/adr/CLI-0002-tui-centralized-state-machine.md` for full rationale.
 
 ## Test Conventions
 
 - Mock `node:fs` and platform utilities via `vi.mock(...)` at the top of each test file
-- Use `makeComponent()` from `tests/__fixtures__/tree-responses.ts` for test data
-- Integration tests use `memfs` for in-memory file I/O
-- Do not mock the GitHub API in integration tests — use fixtures or recorded responses
-- Coverage excludes `src/index.ts` and `src/ui/interactive.ts`
+- All tests are in `tests/unit/` — no separate integration or CLI test categories
+- Test files mirror source structure: `tests/unit/core/`, `tests/unit/cli/`, `tests/unit/tui/`, `tests/unit/mcp/`
+- Each test references the requirement ID it covers (e.g. `// TUI-REQ-0007`)
+- Coverage excludes `src/index.ts`
+- **Ink keyboard testing caveat**: Escape key uses `setImmediate` internally — cannot be tested synchronously. Arrow key navigation requires React `act()` to flush batch updates.
+
+## Key Types
+
+All core types come from `@cowboylogic/cerebro-schema`:
+
+- `ArtifactType`: `'skill' | 'instruction' | 'prompt' | 'agent' | 'hook' | 'mcp-server' | 'snippet' | 'workflow' | 'other'`
+- `ToolId`: `'claude-code' | 'copilot' | 'agents' | 'cursor' | 'windsurf' | 'opencode'`
+- `Scope`: `'workspace' | 'user'`
+- `Artifact`: `{ id, name, type, source, description?, version?, tags?, supports? }`
+
+CLI-local types (in `src/core/config.ts`):
+
+- `SourceEntry`: `{ name, url, enabled, trusted }`
+- `CerebroConfig`: full config structure, mirrors `config.yaml`
 
 ## Keeping This File Current
 
@@ -71,14 +136,4 @@ This file is a living document. Update it — in the same PR as the code change 
 - Architecture patterns change (new modules, renamed abstractions, removed layers)
 - Conventions are added or revised (imports, guards, naming rules)
 - Key types, entry points, or security rules change
-- Test setup changes (new fixtures, new categories, changed thresholds)
-- The `.agents/skills/` content diverges from the current codebase
-
-At the end of any significant session, check whether any section here has drifted and update it before closing the PR. The same applies to `AGENTS.md` and all `.agents/skills/` files in this repo.
-
-## Key Types (src/core/types.ts)
-
-- `ComponentType`: `'skill' | 'agent' | 'prompt' | 'instruction' | 'snippet' | 'workflow' | 'unknown'`
-- `TargetIDE`: `'claude-code' | 'opencode' | 'vscode' | 'copilot'`
-- `Scope`: `'user' | 'workspace'`
-- `RepoSource`: `{ owner, repo, branch?, path? }`
+- Test setup or structure changes

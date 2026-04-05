@@ -4,7 +4,7 @@
 **Status:** Draft
 **Date:** 2026-03-29
 **Area:** core
-**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0003 (GitHub Client), `@cowboylogic/cerebro-schema` (Artifact, ToolId, Scope)
+**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0003 (Source Provider), `@cowboylogic/cerebro-schema` (Artifact, ToolId, Scope)
 **Consumed by:** TUI install action, CLI install command, MCP install_artifact tool
 
 ---
@@ -41,7 +41,7 @@ The installer is the only module that writes to the user's filesystem outside of
 import type { Artifact, ToolId, Scope } from '@cowboylogic/cerebro-schema';
 import type { CerebroConfig } from './config.js';
 import type { InstallManifest } from './manifest.js';
-import type { GitHubClient } from './github.js';
+import type { SourceProvider } from './provider.js';
 
 export interface InstallOptions {
   /** If true, overwrite the destination if it already exists. Default: false. */
@@ -74,7 +74,7 @@ export function installArtifact(
   scope: Scope,
   config: CerebroConfig,
   manifest: InstallManifest,
-  github: GitHubClient,
+  provider: SourceProvider,
   options: InstallOptions
 ): Promise<InstallOutcome>;
 ```

@@ -4,7 +4,7 @@
 **Status:** Draft
 **Date:** 2026-03-29
 **Area:** core
-**Depends on:** SPEC-0003 (GitHub Client), `@cowboylogic/cerebro-schema` (CerebroCatalog, Artifact, validateCatalog)
+**Depends on:** SPEC-0003 (Source Provider), `@cowboylogic/cerebro-schema` (CerebroCatalog, Artifact, validateCatalog)
 **Consumed by:** SPEC-0004 (Session — catalog cache), TUI TypeMenu + ItemList screens, CLI list command, MCP list_artifacts tool
 
 ---
@@ -37,7 +37,7 @@ The catalog module is the sole entry point for artifact discovery — callers ne
 
 ```typescript
 import type { Artifact, ArtifactType } from '@cowboylogic/cerebro-schema';
-import type { GitHubClient } from './github.js';
+import type { SourceProvider } from './provider.js';
 
 export type CatalogSource = 'catalog' | 'heuristic';
 
@@ -59,16 +59,16 @@ export interface CatalogFilter {
 }
 
 /**
- * Fetch and return the artifact list for a GitHub repository.
+ * Fetch and return the artifact list for a source repository.
  * Tries cerebro-catalog.yaml first; falls back to heuristic scan.
  *
- * @param github  - GitHub client instance from the active session
- * @param owner   - GitHub repository owner
- * @param repo    - GitHub repository name
- * @param filter  - Optional filter applied to results before returning
+ * @param provider - SourceProvider instance from the active session
+ * @param owner    - Repository owner (GitHub user/org)
+ * @param repo     - Repository name
+ * @param filter   - Optional filter applied to results before returning
  */
 export function fetchCatalog(
-  github: GitHubClient,
+  provider: SourceProvider,
   owner: string,
   repo: string,
   filter?: CatalogFilter

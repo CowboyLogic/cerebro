@@ -4,13 +4,13 @@
   "description": "Install AI components (agents, skills, prompts, instructions) from GitHub into your favorite IDE",
   "type": "module",
   "bin": {
-    "cerebro": "./bin/ai-install.js"
+    "cerebro": "./bin/cerebro.js"
   },
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "postbuild": "node -e \"try{require('node:fs').chmodSync('bin/ai-install.js',0o755)}catch{}\"",
+    "postbuild": "node -e \"try{require('node:fs').chmodSync('bin/cerebro.js',0o755)}catch{}\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -36,17 +36,20 @@
   },
   "dependencies": {
     "@cowboylogic/cerebro-schema": "file:../cerebro-schema",
-    "@inquirer/prompts": "^8.3.2",
-    "chalk": "^5.4.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@octokit/rest": "^22.0.1",
     "commander": "^13.1.0",
+    "ink": "^6.8.0",
     "js-yaml": "^4.1.0",
-    "ora": "^9.3.0",
-    "picocolors": "^1.1.1"
+    "react": "^19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.0",
+    "@types/react": "^19.2.14",
     "@vitest/coverage-v8": "^4.1.0",
+    "ink-testing-library": "^4.0.0",
     "memfs": "^4.56.11",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
