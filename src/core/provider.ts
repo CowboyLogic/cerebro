@@ -11,7 +11,7 @@ import path from 'node:path';
 import { Octokit } from '@octokit/rest';
 
 // Read version from package.json for the User-Agent header
-const VERSION = '0.1.0';
+export const VERSION = '0.1.0';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -168,6 +168,24 @@ export function resolveGitHubToken(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * PRV-REQ-0018: Returns a human-readable label for the active GitHub auth
+ * source. Detection order mirrors resolveGitHubToken. Never returns a token
+ * value — only a label string.
+ */
+export function resolveGitHubTokenSource(): 'GITHUB_TOKEN' | 'GH_TOKEN' | 'gh CLI' | 'none' {
+  if (process.env.GITHUB_TOKEN) return 'GITHUB_TOKEN';
+  if (process.env.GH_TOKEN) return 'GH_TOKEN';
+  try {
+    const out = execSync('gh auth token', { timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const trimmed = out.toString().trim();
+    if (trimmed) return 'gh CLI';
+  } catch {
+    // fall through
+  }
+  return 'none';
 }
 
 // ---------------------------------------------------------------------------

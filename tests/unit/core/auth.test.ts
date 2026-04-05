@@ -150,3 +150,60 @@ describe('createProvider — token wiring', () => {
     expect(opts['auth']).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests for resolveGitHubTokenSource (PRV-REQ-0018)
+// ---------------------------------------------------------------------------
+
+describe('resolveGitHubTokenSource', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+  });
+
+  it('PRV-REQ-0018: returns GITHUB_TOKEN when GITHUB_TOKEN env var is set', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_secret';
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('GITHUB_TOKEN');
+  });
+
+  it('PRV-REQ-0018: returns GH_TOKEN when GH_TOKEN is set and GITHUB_TOKEN is absent', async () => {
+    process.env.GH_TOKEN = 'ghp_gh_token';
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('GH_TOKEN');
+  });
+
+  it('PRV-REQ-0018: GITHUB_TOKEN takes priority over GH_TOKEN', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_first';
+    process.env.GH_TOKEN = 'ghp_second';
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('GITHUB_TOKEN');
+  });
+
+  it('PRV-REQ-0018: returns gh CLI when gh auth token succeeds', async () => {
+    mockExecSync.mockReturnValue(Buffer.from('ghp_from_cli\n'));
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('gh CLI');
+  });
+
+  it('PRV-REQ-0018: returns none when gh auth token throws', async () => {
+    mockExecSync.mockImplementation(() => { throw new Error('gh not found'); });
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('none');
+  });
+
+  it('PRV-REQ-0018: returns none when gh auth token returns empty string', async () => {
+    mockExecSync.mockReturnValue(Buffer.from('   \n'));
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    expect(resolveGitHubTokenSource()).toBe('none');
+  });
+
+  it('PRV-REQ-0018: never returns a token value — only a label string', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_super_secret_token_value';
+    const { resolveGitHubTokenSource } = await import('../../../src/core/provider.js');
+    const result = resolveGitHubTokenSource();
+    expect(result).not.toContain('ghp_super_secret_token_value');
+    expect(['GITHUB_TOKEN', 'GH_TOKEN', 'gh CLI', 'none']).toContain(result);
+  });
+});

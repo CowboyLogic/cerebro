@@ -132,6 +132,20 @@ export function createProvider(url: string): SourceProvider;
 export class UnsupportedProviderError extends Error {
   readonly domain: string;
 }
+
+/**
+ * Returns a human-readable label identifying the active GitHub authentication
+ * source without exposing the token value.
+ *
+ * Detection order (first match wins):
+ *   1. process.env.GITHUB_TOKEN → 'GITHUB_TOKEN'
+ *   2. process.env.GH_TOKEN     → 'GH_TOKEN'
+ *   3. `gh auth token` succeeds  → 'gh CLI'
+ *   4. (none of the above)       → 'none'
+ *
+ * MUST NOT return the token string itself.
+ */
+export function resolveGitHubTokenSource(): 'GITHUB_TOKEN' | 'GH_TOKEN' | 'gh CLI' | 'none';
 ```
 
 ---
@@ -183,6 +197,7 @@ The `GitHubProvider` handles all `github.com` URLs. It is the only provider ship
 | PRV-REQ-0015 | MUST | HTTP 404 MUST surface as `RepoNotFoundError`. |
 | PRV-REQ-0016 | MUST | HTTP 403 / 429 MUST surface as `RateLimitError` with a message noting the 60 req/hour unauthenticated limit. |
 | PRV-REQ-0017 | MUST | File content from the GitHub API (base64-encoded) MUST be decoded to UTF-8 in `fetchFileContent()`. |
+| PRV-REQ-0018 | MUST | `resolveGitHubTokenSource()` MUST return `'GITHUB_TOKEN'`, `'GH_TOKEN'`, `'gh CLI'`, or `'none'` by checking `process.env.GITHUB_TOKEN`, `process.env.GH_TOKEN`, and `gh auth token` (in that order). It MUST NOT return any token value. |
 
 ---
 

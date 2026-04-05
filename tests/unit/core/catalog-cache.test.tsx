@@ -44,6 +44,7 @@ vi.mock('../../../src/core/installer.js', () => ({
 }));
 
 vi.mock('../../../src/core/provider.js', () => ({
+  VERSION: '0.1.0',
   parseRepoUrl: vi.fn((url: string) => {
     const match = /^https:\/\/github\.com\/([^/]+)\/([^/]+)/.exec(url);
     if (!match) throw new Error(`Invalid GitHub URL: ${url}`);

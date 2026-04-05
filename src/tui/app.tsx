@@ -3,60 +3,6 @@
  */
 
 // ---------------------------------------------------------------------------
-// Banner (inlined from former src/utils/theme.ts)
-// ---------------------------------------------------------------------------
-
-// Raw ANSI helpers — avoids a chalk dependency in the TUI
-function ansi(code: string) {
-  return (s: string) => `\u001b[${code}m${s}\u001b[0m`;
-}
-const bold = ansi('1');
-const dim = ansi('2');
-function hex(h: string) {
-  // Convert #rrggbb → ANSI 24-bit foreground escape
-  const r = parseInt(h.slice(1, 3), 16);
-  const g = parseInt(h.slice(3, 5), 16);
-  const b = parseInt(h.slice(5, 7), 16);
-  return (s: string) => `\u001b[38;2;${r};${g};${b}m${s}\u001b[0m`;
-}
-function hexBold(h: string) {
-  const inner = hex(h);
-  return (s: string) => bold(inner(s));
-}
-
-const ART: Record<string, string[]> = {
-  C: [' ██████╗ ', '██╔════╝ ', '██║      ', '██║      ', '╚██████╗ ', ' ╚═════╝ '],
-  E: ['███████╗', '██╔════╝', '█████╗  ', '██╔══╝  ', '███████╗', '╚══════╝'],
-  R: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██║  ██║', '╚═╝  ╚═╝'],
-  B: ['██████╗ ', '██╔══██╗', '██████╔╝', '██╔══██╗', '██████╔╝', '╚═════╝ '],
-  O: [' ██████╗ ', '██╔═══██╗', '██║   ██║', '██║   ██║', '╚██████╔╝', ' ╚═════╝ '],
-};
-
-const ART_COLORS = [
-  hexBold('#7C3AED'), // C
-  hexBold('#6366F1'), // E
-  hexBold('#3B82F6'), // R
-  hexBold('#0EA5E9'), // E
-  hexBold('#0891B2'), // B
-  hexBold('#06B6D4'), // R
-  hexBold('#22D3EE'), // O
-];
-
-function banner(): string {
-  const word = ['C', 'E', 'R', 'E', 'B', 'R', 'O'];
-  const indent = '   ';
-  const artLines = Array.from({ length: 6 }, (_, row) =>
-    indent + word.map((ch, i) => ART_COLORS[i](ART[ch][row])).join(''),
-  );
-  const tag = dim('─'.repeat(58));
-  const sub =
-    '   ' +
-    hexBold('#7C3AED')('Cerebro') +
-    dim('  ·  Install AI skills, agents & prompts into your favorite IDE  ·  v0.1.0');
-  return ['', ...artLines, '   ' + tag, sub, ''].join('\n');
-}
-
-// ---------------------------------------------------------------------------
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
@@ -73,7 +19,8 @@ import {
 import { setTarget, setScope } from '../core/session.js';
 import { fetchCatalog } from '../core/catalog.js';
 import { installArtifact } from '../core/installer.js';
-import { parseRepoUrl } from '../core/provider.js';
+import { parseRepoUrl, resolveGitHubTokenSource } from '../core/provider.js';
+import { Banner, type AuthSource } from './banner.js';
 import { getArtifactStatus, type ArtifactStatus } from '../core/manifest.js';
 import { makeInitialState, type TuiState } from './types.js';
 import { handleKey, PAGE_SIZE, MVP_TARGETS, type KeyEvent, type TuiAction } from './transitions.js';
@@ -98,9 +45,10 @@ import {
 export interface AppProps {
   session: Session;
   pageSize?: number;
+  authSource?: AuthSource;
 }
 
-export function App({ session, pageSize = PAGE_SIZE }: AppProps) {
+export function App({ session, pageSize = PAGE_SIZE, authSource = 'none' }: AppProps) {
   const { exit } = useApp();
 
   const [state, setState] = useState<TuiState>(() => {
@@ -339,11 +287,10 @@ export function App({ session, pageSize = PAGE_SIZE }: AppProps) {
 
   const { screen } = state;
   const enabledSources = session.config.sources.filter(s => s.enabled);
-  const bannerText = banner();
 
   return (
     <Box flexDirection="column">
-      <Text>{bannerText}</Text>
+      <Banner session={session} authSource={authSource} />
 
       {state.loading && <Loading message={state.loading} />}
 
@@ -459,8 +406,13 @@ export async function runTui(): Promise<void> {
   const CURSOR_HOME = '\x1b[H';
   process.stdout.write(ENTER_ALT + CURSOR_HOME);
   try {
+    const authSource = resolveGitHubTokenSource();
     const { waitUntilExit } = render(
-      <App session={session} pageSize={session.config.defaults.ui?.pageSize ?? PAGE_SIZE} />,
+      <App
+        session={session}
+        pageSize={session.config.defaults.ui?.pageSize ?? PAGE_SIZE}
+        authSource={authSource}
+      />,
     );
     await waitUntilExit();
   } finally {

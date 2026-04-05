@@ -67,10 +67,16 @@ The TUI (Terminal User Interface) is the primary human-facing interface for Cere
 
 ### 1. Banner + Repo List
 
-Displayed on launch. Shows the Cerebro ASCII banner followed by the list of enabled sources and an "Add custom source…" option at the bottom.
+Displayed on launch. Shows the `<Banner>` component followed by the list of enabled sources and an "Add custom source…" option at the bottom.
 
 ```
-[ASCII BANNER]
+  [C][E][R][E][B][R][O]  │  Install AI skills & agents into your IDE
+  [  glyph row 2       ]  │
+  [  glyph row 3       ]  │  Version: 0.1.0
+  [  glyph row 4       ]  │  Auth:    GITHUB_TOKEN
+  [  glyph row 5       ]  │  Sources: 2 enabled
+  [  glyph row 6       ]  │  Default: claude-code · workspace
+  ════════════════════════════════════════════════ (violet border)
 
 Select a source repository:
 
@@ -80,6 +86,35 @@ Select a source repository:
      + Add custom source…
 
   ↑↓ navigate · Enter select · Escape exit
+```
+
+#### Banner Component
+
+The `<Banner>` React (Ink) component renders in a fixed two-pane layout. It replaces the former raw-ANSI `banner()` string function.
+
+**Left pane (~65 columns):** Six rows of coloured ASCII art spelling CEREBRO. Each row is rendered as a `<Box flexDirection="row">` containing seven `<Text color={palette[i]} bold>` children — one per glyph column. The colour palette (`ART_COLORS`) progresses from deep violet (`#7C3AED`) at C to cyan at the final O. The `ART` glyph data is unchanged.
+
+**Right pane (remaining columns):** Six lines of contextual information, vertically aligned with the six art rows:
+
+| Row | Content |
+|-----|---------|
+| 1 | Tagline: `Install AI skills & agents into your IDE` |
+| 2 | *(blank)* |
+| 3 | `Version: {VERSION}` |
+| 4 | `Auth:    {resolveGitHubTokenSource()}` |
+| 5 | `Sources: {N} enabled` — count of enabled sources from the session |
+| 6 | `Default: {target} · {scope}` or `Default: not set` |
+
+Labels are left-padded so all values line up at the same column (tab-stop after `Sources: `, the longest label at 9 characters).
+
+**Outer wrapper:** `<Box flexDirection="row" borderBottom borderBottomColor="#7C3AED">`. The bottom border uses deep violet (`#7C3AED`), matching the leftmost glyph colour. There are no blank padding rows above or below the art. Total component height: **six rows** (plus the border line).
+
+**Props:**
+```typescript
+interface BannerProps {
+  session: Session;                                       // for sources + defaults
+  authSource: 'GITHUB_TOKEN' | 'GH_TOKEN' | 'gh CLI' | 'none';
+}
 ```
 
 **Behaviour:**
@@ -256,13 +291,13 @@ Activated from "Add custom source…" in the Repo List.
 
 | ID | Keyword | Requirement |
 |----|---------|-------------|
-| TUI-REQ-0001 | MUST | The TUI MUST display the ASCII banner on launch before any other content. |
+| TUI-REQ-0001 | MUST | The TUI MUST render the `<Banner>` component on launch before any list content. The banner MUST NOT be implemented as a raw-ANSI string; it MUST be a React (Ink) component. |
 | TUI-REQ-0002 | MUST | `Ctrl-C` MUST exit the process immediately from any screen. |
 | TUI-REQ-0003 | MUST | `Escape` MUST navigate back one level from any screen. At the Repo List screen, Escape MUST exit. |
 | TUI-REQ-0004 | MUST | The Trust Warning MUST be shown the first time a repo is selected in a session if `trusted: false`. It MUST NOT be shown again for the same repo in the same session. |
 | TUI-REQ-0005 | MUST | Target and Scope selection MUST be shown exactly once per session, after the first trust acknowledgement, and MUST NOT be repeated for subsequent repos in the same session. |
 | TUI-REQ-0006 | MUST | The Type Menu MUST be skipped automatically when the selected repo contains only one artifact type, proceeding directly to the Item List for that type. |
-| TUI-REQ-0007 | MUST | The Item List MUST display a maximum of 50 items per page. |
+| TUI-REQ-0007 | MUST | The Item List MUST display a maximum of `pageSize` items per page. `pageSize` MUST default to `10` and MUST be configurable via `config.defaults.ui.pageSize`. |
 | TUI-REQ-0008 | MUST | `Spacebar` on the Item List MUST advance to the next page. On the last page, it MUST wrap to page 1. |
 | TUI-REQ-0009 | MUST | The filter input MUST update the visible item list in real time as the user types. |
 | TUI-REQ-0010 | MUST | Filter matching MUST be case-insensitive and MUST match against the artifact `name` field only. |
@@ -275,6 +310,12 @@ Activated from "Add custom source…" in the Repo List.
 | TUI-REQ-0017 | MUST | The Add Source flow MUST verify repo accessibility via a lightweight API call before accepting the URL. |
 | TUI-REQ-0018 | MUST | `createSession()` errors (`ConfigParseError`, `ManifestParseError`) MUST be caught at TUI startup, displayed as a plain-text error message, and exit with code 1. |
 | TUI-REQ-0019 | SHOULD | Navigation breadcrumbs (repo · type · target · scope) SHOULD be displayed on the Type Menu and Item List screens for orientation. |
+| TUI-REQ-0020 | MUST | The `<Banner>` component MUST render in a two-pane `<Box flexDirection="row">` layout: ASCII art on the left, info panel on the right. |
+| TUI-REQ-0021 | MUST | The left pane MUST render exactly six rows of coloured ASCII art. Each row MUST be a `<Box flexDirection="row">` containing seven `<Text bold>` children with colours from `ART_COLORS`. |
+| TUI-REQ-0022 | MUST | The right pane MUST display, in order: tagline, blank line, version, auth source, enabled-source count, and default target·scope (or "not set"). |
+| TUI-REQ-0023 | MUST | The auth label in the right pane MUST be obtained from `resolveGitHubTokenSource()` (SPEC-0003 PRV-REQ-0018). It MUST display the source name only — never the token value. |
+| TUI-REQ-0024 | MUST | The outer `<Banner>` wrapper MUST apply a bottom border in colour `#7C3AED` (`borderBottom borderBottomColor="#7C3AED"`). No blank padding rows above or below the art are permitted; total height MUST be six rows. |
+| TUI-REQ-0025 | MUST | `runTui()` MUST call `resolveGitHubTokenSource()` once at startup and pass the result to `<Banner>` as `authSource`. |
 
 ---
 
