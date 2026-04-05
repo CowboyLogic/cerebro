@@ -157,5 +157,34 @@ grep "useState" src/tui/screens.tsx
 
 ---
 
+## Amendment: Alternate screen buffer (2026-04-05)
+
+**Ink v6 removed the `altScreen` render option.** It was present in Ink v3–v4 as
+`render(<App />, { altScreen: true })` and switched the terminal to the alternate screen
+buffer automatically. In Ink v6 (installed: 6.8.0) `RenderOptions` no longer includes
+this property; passing it produces a TypeScript compile error (`TS2353`).
+
+**Decision:** Write the ANSI escape sequences directly to `process.stdout` in `runTui()`:
+
+```typescript
+const ENTER_ALT = '\x1b[?1049h';
+const EXIT_ALT  = '\x1b[?1049l';
+process.stdout.write(ENTER_ALT);
+try {
+  const { waitUntilExit } = render(<App ... />);
+  await waitUntilExit();
+} finally {
+  process.stdout.write(EXIT_ALT);
+}
+```
+
+This achieves identical behaviour — the TUI occupies the alternate screen buffer and the
+terminal is fully restored on exit (including on unhandled exceptions via `finally`).
+The sequences are part of the ANSI/xterm standard and are supported by all terminals
+that support Ink itself. Do not attempt to restore the `altScreen` option when upgrading
+Ink; use this pattern instead.
+
+---
+
 *Supersedes: (none)*
 *Related: S-0006 (Design-first development process), SPEC-0007 (TUI Mode)*

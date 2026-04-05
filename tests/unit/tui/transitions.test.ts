@@ -573,6 +573,47 @@ describe('add-source-save', () => {
 });
 
 // ---------------------------------------------------------------------------
+// item-list — configurable pageSize (TUI-REQ-0019)
+// ---------------------------------------------------------------------------
+
+describe('item-list — configurable pageSize (TUI-REQ-0019)', () => {
+  it('TUI-REQ-0019: spacebar uses state.pageSize for page count, not PAGE_SIZE constant', () => {
+    const customPageSize = 3;
+    // 5 artifacts → 2 pages at pageSize=3 (but only 1 page at PAGE_SIZE=10)
+    const artifacts = Array.from({ length: customPageSize + 2 }, (_, i) => makeArtifact(`s${i}`));
+    const catalog = { source: 'catalog', artifacts };
+    const state = withScreen('item-list', { page: 0, catalog, selectedType: 'skill', pageSize: customPageSize });
+    const [next] = handleKey(state, SPACE, sources);
+    expect(next.page).toBe(1);
+  });
+
+  it('TUI-REQ-0019: down arrow clamps at state.pageSize-1 when pageSize is smaller than PAGE_SIZE', () => {
+    const customPageSize = 2;
+    const artifacts = Array.from({ length: customPageSize }, (_, i) => makeArtifact(`s${i}`));
+    const catalog = { source: 'catalog', artifacts };
+    const state = withScreen('item-list', {
+      itemCursor: customPageSize - 1,
+      catalog,
+      selectedType: 'skill',
+      pageSize: customPageSize,
+    });
+    const [next] = handleKey(state, DOWN, sources);
+    expect(next.itemCursor).toBe(customPageSize - 1);
+  });
+
+  it('TUI-REQ-0019: getPageItems uses state.pageSize to slice the artifact list', () => {
+    const customPageSize = 4;
+    const artifacts = Array.from({ length: 10 }, (_, i) => makeArtifact(`s${i}`));
+    const catalog = { source: 'catalog', artifacts };
+    const state = withScreen('item-list', { page: 1, catalog, selectedType: 'skill', pageSize: customPageSize });
+    // page 1 with pageSize=4 → items 4-7, last item index = 3
+    const [next] = handleKey(state, DOWN, sources);
+    // cursor starts at 0, should advance
+    expect(next.itemCursor).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Error state is cleared on navigation
 // ---------------------------------------------------------------------------
 

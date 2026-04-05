@@ -388,6 +388,36 @@ describe('ItemList', () => {
     expect(lastFrame()).toContain('Skill 0');
     expect(lastFrame()).not.toContain('Skill 1');
   });
+
+  it('TUI-REQ-0019: respects pageSize prop — only shows pageSize items per page', () => {
+    const manyArtifacts: Artifact[] = Array.from({ length: 15 }, (_, i) => ({
+      id: `art-${i}`,
+      name: `Artifact ${i}`,
+      type: 'skill' as const,
+      source: `skills/art-${i}`,
+    }));
+    const { lastFrame } = render(
+      <ItemList
+        sourceName="test"
+        selectedType="skill"
+        target="claude-code"
+        scope="workspace"
+        artifacts={manyArtifacts}
+        getStatus={() => 'available'}
+        filter=""
+        cursor={0}
+        page={0}
+        pageSize={5}
+        installing={null}
+        installError={null}
+      />,
+    );
+    // page 0 with pageSize=5 shows items 0–4
+    expect(lastFrame()).toContain('Artifact 0');
+    expect(lastFrame()).toContain('Artifact 4');
+    // item 5 must NOT appear (would only show with pageSize ≥ 6)
+    expect(lastFrame()).not.toContain('Artifact 5');
+  });
 });
 
 // ---------------------------------------------------------------------------

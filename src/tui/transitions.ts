@@ -78,12 +78,12 @@ function getFilteredArtifacts(state: TuiState): Artifact[] {
 }
 
 function getPageCount(state: TuiState): number {
-  return Math.max(1, Math.ceil(getFilteredArtifacts(state).length / PAGE_SIZE));
+  return Math.max(1, Math.ceil(getFilteredArtifacts(state).length / state.pageSize));
 }
 
 function getPageItems(state: TuiState): Artifact[] {
   const filtered = getFilteredArtifacts(state);
-  return filtered.slice(state.page * PAGE_SIZE, (state.page + 1) * PAGE_SIZE);
+  return filtered.slice(state.page * state.pageSize, (state.page + 1) * state.pageSize);
 }
 
 function isValidGitHubUrl(url: string): boolean {
@@ -322,7 +322,7 @@ function handleItemList(
   if (key.space) {
     if (!state.catalog || !state.selectedType) return [state, null];
     const allOfType = state.catalog.artifacts.filter(a => a.type === state.selectedType);
-    const pageCount = Math.max(1, Math.ceil(allOfType.length / PAGE_SIZE));
+    const pageCount = Math.max(1, Math.ceil(allOfType.length / state.pageSize));
     const nextPage = (state.page + 1) % pageCount;
     return [{ ...state, page: nextPage, itemCursor: 0, filter: '' }, null];
   }

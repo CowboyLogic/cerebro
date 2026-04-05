@@ -234,6 +234,7 @@ export interface ItemListProps {
   filter: string;
   cursor: number;
   page: number;
+  pageSize?: number;
   installing: string | null;
   installError: string | null;
 }
@@ -241,6 +242,7 @@ export interface ItemListProps {
 export function ItemList({
   sourceName, selectedType, target, scope,
   artifacts, getStatus, filter, cursor, page,
+  pageSize = PAGE_SIZE,
   installing, installError,
 }: ItemListProps) {
   // TUI-REQ-0010: case-insensitive name match
@@ -248,8 +250,8 @@ export function ItemList({
     ? artifacts.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()))
     : artifacts;
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageItems = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   return (
     <Box flexDirection="column" paddingLeft={2} paddingTop={1}>

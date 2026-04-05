@@ -381,3 +381,30 @@ describe('saveConfig', () => {
     expect(usedRename || usedTmp).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// CFG-REQ-0013: defaults.ui.pageSize
+// ---------------------------------------------------------------------------
+describe('loadConfig — defaults.ui.pageSize', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('CFG-REQ-0013: defaults.ui.pageSize is loaded from user config', async () => {
+    fsMock.existsSync.mockReturnValue(true);
+    fsMock.readFileSync.mockReturnValue(
+      'defaults:\n  ui:\n    pageSize: 20\nsources: []\ntargets: {}\n',
+    );
+    const { loadConfig } = await import('../../../src/core/config.js');
+    const config = loadConfig();
+    expect(config.defaults.ui?.pageSize).toBe(20);
+  });
+
+  it('CFG-REQ-0013: defaults.ui.pageSize is undefined when not set', async () => {
+    fsMock.existsSync.mockReturnValue(true);
+    fsMock.readFileSync.mockReturnValue('defaults: {}\nsources: []\ntargets: {}\n');
+    const { loadConfig } = await import('../../../src/core/config.js');
+    const config = loadConfig();
+    expect(config.defaults.ui?.pageSize).toBeUndefined();
+  });
+});

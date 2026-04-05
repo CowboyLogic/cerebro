@@ -95,9 +95,14 @@ export interface TuiState {
   // ── Session trust tracking ─────────────────────────────────────────────────
 
   trustedThisSession: Set<string>;
+
+  // ── Pagination ────────────────────────────────────────────────────────────
+
+  /** Items shown per page — set at startup from config, falls back to 10 */
+  pageSize: number;
 }
 
-export function makeInitialState(): TuiState {
+export function makeInitialState(pageSize = 10): TuiState {
   return {
     screen: 'repo-list',
     exiting: false,
@@ -125,5 +130,6 @@ export function makeInitialState(): TuiState {
     loading: null,
     error: null,
     trustedThisSession: new Set(),
+    pageSize,
   };
 }

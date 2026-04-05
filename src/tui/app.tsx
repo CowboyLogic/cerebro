@@ -76,7 +76,7 @@ import { installArtifact } from '../core/installer.js';
 import { parseRepoUrl } from '../core/provider.js';
 import { getArtifactStatus, type ArtifactStatus } from '../core/manifest.js';
 import { makeInitialState, type TuiState } from './types.js';
-import { handleKey, MVP_TARGETS, type KeyEvent, type TuiAction } from './transitions.js';
+import { handleKey, PAGE_SIZE, MVP_TARGETS, type KeyEvent, type TuiAction } from './transitions.js';
 import {
   RepoList,
   TrustWarning,
@@ -97,13 +97,14 @@ import {
 
 export interface AppProps {
   session: Session;
+  pageSize?: number;
 }
 
-export function App({ session }: AppProps) {
+export function App({ session, pageSize = PAGE_SIZE }: AppProps) {
   const { exit } = useApp();
 
   const [state, setState] = useState<TuiState>(() => {
-    const s = makeInitialState();
+    const s = makeInitialState(pageSize);
     // Pre-populate target/scope from session (SES-REQ-0003/SES-REQ-0004)
     s.target = session.target;
     s.scope = session.scope;
@@ -398,6 +399,7 @@ export function App({ session }: AppProps) {
           filter={state.filter}
           cursor={state.itemCursor}
           page={state.page}
+          pageSize={state.pageSize}
           installing={state.loading}
           installError={state.error}
         />
@@ -450,6 +452,18 @@ export async function runTui(): Promise<void> {
     throw err;
   }
 
-  const { waitUntilExit } = render(<App session={session} />);
-  await waitUntilExit();
+  // TUI-REQ-0017: switch to the alternate screen buffer (like vim/less) so the
+  // terminal is fully restored to its prior state when the TUI exits.
+  const ENTER_ALT = '\x1b[?1049h';
+  const EXIT_ALT  = '\x1b[?1049l';
+  const CURSOR_HOME = '\x1b[H';
+  process.stdout.write(ENTER_ALT + CURSOR_HOME);
+  try {
+    const { waitUntilExit } = render(
+      <App session={session} pageSize={session.config.defaults.ui?.pageSize ?? PAGE_SIZE} />,
+    );
+    await waitUntilExit();
+  } finally {
+    process.stdout.write(EXIT_ALT);
+  }
 }

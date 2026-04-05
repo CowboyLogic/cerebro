@@ -33,6 +33,9 @@ export interface CerebroConfig {
   defaults: {
     target?: ToolId;
     scope?: Scope;
+    ui?: {
+      pageSize?: number;
+    };
   };
   sources: SourceEntry[];
   targets: Partial<Record<ToolId, Partial<Record<ArtifactType, Partial<TargetPathEntry>>>>>;
