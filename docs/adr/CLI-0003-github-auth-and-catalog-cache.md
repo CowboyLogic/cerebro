@@ -1,8 +1,8 @@
 # CLI-0003: GitHub Token Detection and Session-Level Catalog Cache
 
-**Level:** CLI
-**Status:** Accepted
-**Date:** 2026-04-05
+**Level:** CLI<br />
+**Status:** Accepted<br />
+**Date:** 2026-04-05<br />
 
 ## Context
 
@@ -23,15 +23,15 @@ A third, complementary problem exists independently of authentication: navigatin
 
 ## Rationale
 
-**Token detection over shallow clone.** Clone requires `git` on `PATH` as a runtime dependency (currently none beyond Node.js), downloads the full working tree before user intent is known, breaks on-demand browsing, and adds temp-directory cleanup. Token detection is a pure environment read with one optional child process — no new runtime dependencies, no architecture change to the browsing model.
+**Token detection over shallow clone.** Clone requires `git` on `PATH` as a runtime dependency (currently none beyond Node.js), downloads the full working tree before user intent is known, breaks on-demand browsing, and adds temp-directory cleanup. Token detection is a pure environment read with one optional child process — no new runtime dependencies, no architecture change to the browsing model.<br />
 
-**Tiered token lookup order.** `GITHUB_TOKEN` is the canonical environment variable used by GitHub Actions and most CI systems; it is the most likely to be set in a power user's shell profile. `GH_TOKEN` is the variable set by the GitHub CLI itself when running commands. `gh auth token` handles users who have `gh` installed and authenticated but have not exported the token as an env var. Checking environment variables first avoids spawning a child process in the common case.
+**Tiered token lookup order.** `GITHUB_TOKEN` is the canonical environment variable used by GitHub Actions and most CI systems; it is the most likely to be set in a power user's shell profile. `GH_TOKEN` is the variable set by the GitHub CLI itself when running commands. `gh auth token` handles users who have `gh` installed and authenticated but have not exported the token as an env var. Checking environment variables first avoids spawning a child process in the common case.<br />
 
-**`gh auth token` via child process.** The alternative — reading `gh`'s token store directly from `~/.config/gh/hosts.yml` — is a private file format subject to change without notice. Running `gh auth token` uses the supported public interface.
+**`gh auth token` via child process.** The alternative — reading `gh`'s token store directly from `~/.config/gh/hosts.yml` — is a private file format subject to change without notice. Running `gh auth token` uses the supported public interface.<br />
 
-**Cache keyed by source URL at session scope.** The existing `session.catalogCache` field is the correct place to hold this — it is session-scoped (never persisted), already transported to every call site via the `session` argument, and documents the intent. Keying by URL means the cache is invalidated naturally if the user adds a new source mid-session.
+**Cache keyed by source URL at session scope.** The existing `session.catalogCache` field is the correct place to hold this — it is session-scoped (never persisted), already transported to every call site via the `session` argument, and documents the intent. Keying by URL means the cache is invalidated naturally if the user adds a new source mid-session.<br />
 
-**Cache population in `app.tsx`, not in `catalog.ts`.** The catalog module's responsibility is fetching and parsing; caching navigation state belongs in the consumer. Putting it in `catalog.ts` would require the module to accept and mutate a cache argument, leaking session concerns into a stateless utility.
+**Cache population in `app.tsx`, not in `catalog.ts`.** The catalog module's responsibility is fetching and parsing; caching navigation state belongs in the consumer. Putting it in `catalog.ts` would require the module to accept and mutate a cache argument, leaking session concerns into a stateless utility.<br />
 
 Alternatives considered and rejected:
 - **Shallow clone** — see above.
@@ -40,12 +40,12 @@ Alternatives considered and rejected:
 
 ## Consequences
 
-**Easier:**
+**Easier:**<br />
 - Users who have `gh` installed or `GITHUB_TOKEN` set get 5,000 req/hour automatically, transparent to them.
 - Re-selecting a source in the current session is instant (no network round-trip).
 - `RateLimitError` should become rare in normal interactive use.
 
-**Harder / new obligations:**
+**Harder / new obligations:**<br />
 - `resolveGitHubToken()` must be unit-tested with the child process mocked; it must not throw if `gh` is absent or exits non-zero.
 - `GitHubProvider` constructor must accept an optional token and pass it to Octokit — this is a breaking change to the constructor signature (internal; no external callers outside `createProvider`).
 - `app.tsx` gains a cache-check path in `loadCatalogAndProceed`; the test suite must cover both hit and miss.

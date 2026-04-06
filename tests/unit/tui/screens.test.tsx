@@ -473,7 +473,7 @@ describe('AddSource', () => {
     const { lastFrame } = render(
       <AddSource url="" formatError={null} validating={false} error={null} />,
     );
-    expect(lastFrame()).toContain('Enter a public GitHub repository URL');
+    expect(lastFrame()).toContain('Enter a GitHub repository URL');
   });
 
   it('shows validation error when error prop is set', () => {

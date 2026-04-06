@@ -1,8 +1,8 @@
 # S-0007: Schema Versioning Strategy
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -17,11 +17,11 @@ Treating these as the same thing forces catalog authors and tool developers to m
 
 ## Decision
 
-**The catalog format version is declared by the `cerebro` field** in every `cerebro-catalog.yaml` file (e.g., `cerebro: "1"`). This field is the authoritative version indicator for the catalog format.
+**The catalog format version is declared by the `cerebro` field** in every `cerebro-catalog.yaml` file (e.g., `cerebro: "1"`). This field is the authoritative version indicator for the catalog format.<br />
 
-**The `@cowboylogic/cerebro-schema` package retains validators for the current major version and the immediately preceding major version** (N and N-1). The `validateCatalog()` function detects the `cerebro` field value and routes to the correct validator automatically. To a tool, it is a single call — versioning is handled inside the package.
+**The `@cowboylogic/cerebro-schema` package retains validators for the current major version and the immediately preceding major version** (N and N-1). The `validateCatalog()` function detects the `cerebro` field value and routes to the correct validator automatically. To a tool, it is a single call — versioning is handled inside the package.<br />
 
-**When a new major version ships:**
+**When a new major version ships:**<br />
 
 1. `cerebro-schema` introduces the new format under a new `cerebro: "N"` declaration and a new npm major version
 2. The previous version's validator is retained in the package — tools do not immediately break against old catalogs
@@ -29,7 +29,7 @@ Treating these as the same thing forces catalog authors and tool developers to m
 4. Catalog authors migrate to the new format (`cerebro: "N"`) at their own pace
 5. When the *next* major version (N+2) ships, support for version N is removed — catalog authors have had one full major version cycle to migrate
 
-**Package structure for multi-version support:**
+**Package structure for multi-version support:**<br />
 
 ```
 cerebro-schema/src/
@@ -46,11 +46,11 @@ cerebro-schema/src/
 
 ## Rationale
 
-**Catalog authors are not tool developers.** A repository maintainer who publishes a `cerebro-catalog.yaml` should not be forced to update their file on a schedule dictated by internal tool releases. Decoupling catalog format migration from tool update cycles respects the community's autonomy.
+**Catalog authors are not tool developers.** A repository maintainer who publishes a `cerebro-catalog.yaml` should not be forced to update their file on a schedule dictated by internal tool releases. Decoupling catalog format migration from tool update cycles respects the community's autonomy.<br />
 
-**N-1 support is the right window.** Retaining support for all previous versions indefinitely creates unbounded maintenance debt. Supporting only the current version forces immediate migration. One major version cycle provides a predictable, reasonable migration window without accumulating legacy validators.
+**N-1 support is the right window.** Retaining support for all previous versions indefinitely creates unbounded maintenance debt. Supporting only the current version forces immediate migration. One major version cycle provides a predictable, reasonable migration window without accumulating legacy validators.<br />
 
-**`validateCatalog()` as the abstraction boundary.** Tools call one function; the versioning complexity lives inside the schema package, not spread across every consumer.
+**`validateCatalog()` as the abstraction boundary.** Tools call one function; the versioning complexity lives inside the schema package, not spread across every consumer.<br />
 
 Alternatives considered:
 - **Separate npm packages per format version** (`cerebro-schema-v1`, `cerebro-schema-v2`) — rejected; breaks the single source of truth principle and complicates consumer dependency management.

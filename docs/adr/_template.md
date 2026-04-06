@@ -1,8 +1,8 @@
 # ADR-XXXX: [Title]
 
-**Level:** Suite | CLI | [Product Name]
-**Status:** Draft | Accepted | Deprecated | Superseded by [ADR-XXXX](link)
-**Date:** YYYY-MM-DD
+**Level:** Suite | CLI | [Product Name]<br />
+**Status:** Draft | Accepted | Deprecated | Superseded by [ADR-XXXX](link)<br />
+**Date:** YYYY-MM-DD<br />
 
 ## Context
 

@@ -363,7 +363,7 @@ export function AddSource({ url, formatError, validating, error }: AddSourceProp
     <Box flexDirection="column" paddingLeft={2} paddingTop={1}>
       <Text bold>Add custom source</Text>
       <Box marginTop={1}>
-        <Text>Enter a public GitHub repository URL:</Text>
+        <Text>Enter a GitHub repository URL:</Text>
       </Box>
       <Box marginTop={1}>
         <Text color="cyan">{'> '}{url}{'_'}</Text>

@@ -68,7 +68,10 @@ export class InvalidRepoIdentifierError extends Error {
 
 export class RepoNotFoundError extends Error {
   constructor(owner: string, repo: string) {
-    super(`Repository '${owner}/${repo}' not found. Make sure it exists and is public.`);
+    super(
+      `Repository '${owner}/${repo}' not found or inaccessible. ` +
+        'Make sure it exists and that your token has access to it.',
+    );
     this.name = 'RepoNotFoundError';
   }
 }
@@ -83,8 +86,8 @@ export class FileNotFoundError extends Error {
 export class PrivateRepoError extends Error {
   constructor(owner: string, repo: string) {
     super(
-      `'${owner}/${repo}' appears to be private. ` +
-        'Cerebro currently supports public repositories only.',
+      `Authentication failed for '${owner}/${repo}'. ` +
+        'Your token may be invalid or expired.',
     );
     this.name = 'PrivateRepoError';
   }

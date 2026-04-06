@@ -1,8 +1,8 @@
 # S-0002: Catalog Format Standard
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -27,13 +27,13 @@ The canonical schema is maintained in `@cowboylogic/cerebro-schema`.
 
 ## Rationale
 
-**YAML over JSON:** Catalog files are human-authored. YAML's reduced punctuation and support for comments makes it more maintainable than JSON for this use case.
+**YAML over JSON:** Catalog files are human-authored. YAML's reduced punctuation and support for comments makes it more maintainable than JSON for this use case.<br />
 
-**Explicit `source → target` file mapping:** Giving catalog authors direct control over install paths decouples the installer from IDE-specific path conventions. It also allows a single artifact to install to different locations for different tools without requiring tool-specific installer logic.
+**Explicit `source → target` file mapping:** Giving catalog authors direct control over install paths decouples the installer from IDE-specific path conventions. It also allows a single artifact to install to different locations for different tools without requiring tool-specific installer logic.<br />
 
-**Structured `compatibility[]` over flat `targets[]`:** A flat list of target IDE names cannot express per-tool file mappings or per-tool scope restrictions. The structured model is more verbose but unambiguous.
+**Structured `compatibility[]` over flat `targets[]`:** A flat list of target IDE names cannot express per-tool file mappings or per-tool scope restrictions. The structured model is more verbose but unambiguous.<br />
 
-**Format version field (`cerebro: "1"`):** Makes breaking format changes possible in future without requiring tool version detection.
+**Format version field (`cerebro: "1"`):** Makes breaking format changes possible in future without requiring tool version detection.<br />
 
 ## Consequences
 

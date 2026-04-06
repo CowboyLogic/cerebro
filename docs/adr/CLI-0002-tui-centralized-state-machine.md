@@ -1,8 +1,8 @@
 # CLI-0002: TUI Centralized State Machine
 
-**Level:** CLI
-**Status:** Accepted
-**Date:** 2026-04-05
+**Level:** CLI<br />
+**Status:** Accepted<br />
+**Date:** 2026-04-05<br />
 
 ## Context
 
@@ -44,7 +44,7 @@ All TUI keyboard handling and navigation state is managed in a single centralize
 machine. Screen components are pure render functions — they receive state as props and
 emit callbacks; they own no state and register no `useInput` handlers.
 
-**Structure:**
+**Structure:**<br />
 
 ```
 src/tui/
@@ -54,26 +54,26 @@ src/tui/
 └── app.tsx          — single useInput; calls handleKey; passes state down to screens
 ```
 
-**`TuiState`** holds all cursor positions, sub-screen stages, filter text, and active
+**`TuiState`** holds all cursor positions, sub-screen stages, filter text, and active<br />
 screen identifier — everything that was previously distributed across component-local
 `useState` calls.
 
-**`transitions.ts`** exports a single `handleKey(state: TuiState, key: KeyEvent): TuiState`
+**`transitions.ts`** exports a single `handleKey(state: TuiState, key: KeyEvent): TuiState`<br />
 pure function. It contains all navigation logic derived from SPEC-0007 requirements.
 It has no Ink dependency and no side effects. All sub-screen stages (e.g. ScopeSelect
 persist prompt, AddSource save prompt) are explicit states in `TuiState`, not local
 component state.
 
-**`screens.tsx`** components accept `TuiState` fields as props and return JSX. They must
+**`screens.tsx`** components accept `TuiState` fields as props and return JSX. They must<br />
 not call `useState` for navigation or cursor purposes, and must not call `useInput`.
 
-**`app.tsx`** registers exactly one `useInput` handler, calls `handleKey`, and updates
+**`app.tsx`** registers exactly one `useInput` handler, calls `handleKey`, and updates<br />
 state via `setState`. Async effects (catalog fetch, install) dispatch back into state
 via `setState` with event-shaped objects, the same pattern used by `handleKey`.
 
 ## Rationale
 
-**Why a pure transition function rather than a reducer or state machine library?**
+**Why a pure transition function rather than a reducer or state machine library?**<br />
 
 A plain pure function is the simplest form that satisfies the requirement. It needs no
 library, no schema, and no new concepts — it is a function that takes state and an event
@@ -81,7 +81,7 @@ and returns new state. XState and similar libraries add expressive power for com
 hierarchical machines but introduce learning curve and configuration overhead that is not
 justified by the complexity of this TUI.
 
-**Why centralize state rather than lift it component by component?**
+**Why centralize state rather than lift it component by component?**<br />
 
 Lifting state partially would still leave navigation behavior distributed across
 `app.tsx` handler functions and component callback props. The dispatch + transition
@@ -89,7 +89,7 @@ model puts all navigation logic in one auditable location (`transitions.ts`) tha
 directly to SPEC-0007 requirements — each `if` branch in `handleKey` corresponds to a
 numbered requirement. Partial lifting would not achieve this traceability.
 
-**Why not use `useReducer` instead of `useState + handleKey`?**
+**Why not use `useReducer` instead of `useState + handleKey`?**<br />
 
 `useReducer` would work equally well. The `handleKey` function is structurally a reducer.
 The distinction is cosmetic: `useReducer(handleKey, initialState)` vs
@@ -98,7 +98,7 @@ function signature `handleKey(state, key)` is used in the spec because it matche
 tests call it — tests do not need to know whether the app uses `useState` or `useReducer`
 internally.
 
-**Alternatives rejected:**
+**Alternatives rejected:**<br />
 
 - *Keep distributed `useInput` with better test utilities* — Ink's testing library is
   thin and the async timing issues are fundamental to how Ink dispatches input, not gaps
@@ -109,7 +109,7 @@ internally.
 
 ## Consequences
 
-**Better:**
+**Better:**<br />
 - Navigation logic is unit-testable as plain TypeScript functions — no Ink, no React,
   no async, no `act()`. A test for "Escape clears filter then navigates back" is two
   synchronous calls to `handleKey` with state assertions.
@@ -120,14 +120,14 @@ internally.
 - Sub-screen stages (`ScopeSelect` persist prompt, `AddSource` save prompt) become
   explicit named states, not hidden local flags.
 
-**Harder / constrained:**
+**Harder / constrained:**<br />
 - Screen components must not call `useInput` or `useState` for navigation state. This
   is an enforced constraint, not a suggestion. See Compliance below.
 - Async effects (catalog fetch, install) must feed results back through `setState` rather
   than updating local async state. This is already the pattern in `app.tsx` and does
   not require new infrastructure.
 
-**Follow-on work triggered:**
+**Follow-on work triggered:**<br />
 - `TuiState` in `types.ts` must be extended with cursor fields and explicit sub-screen
   stage identifiers before implementation begins.
 - All `useInput` calls in `screens.tsx` must be removed.
@@ -138,11 +138,11 @@ internally.
 
 ## Compliance
 
-**Compliant:** `screens.tsx` components have no `useInput` calls and no `useState` calls
+**Compliant:** `screens.tsx` components have no `useInput` calls and no `useState` calls<br />
 for cursor or navigation state. `transitions.ts` has no Ink import. `app.tsx` has exactly
 one `useInput` call.
 
-**Non-compliant:** Any `useInput` appearing in a screen component. Any `useState(0)` for
+**Non-compliant:** Any `useInput` appearing in a screen component. Any `useState(0)` for<br />
 a cursor index in a screen component. Any navigation logic (screen transitions, cursor
 movement, filter clearing) appearing inside a component rather than in `transitions.ts`.
 
@@ -159,12 +159,12 @@ grep "useState" src/tui/screens.tsx
 
 ## Amendment: Alternate screen buffer (2026-04-05)
 
-**Ink v6 removed the `altScreen` render option.** It was present in Ink v3–v4 as
+**Ink v6 removed the `altScreen` render option.** It was present in Ink v3–v4 as<br />
 `render(<App />, { altScreen: true })` and switched the terminal to the alternate screen
 buffer automatically. In Ink v6 (installed: 6.8.0) `RenderOptions` no longer includes
 this property; passing it produces a TypeScript compile error (`TS2353`).
 
-**Decision:** Write the ANSI escape sequences directly to `process.stdout` in `runTui()`:
+**Decision:** Write the ANSI escape sequences directly to `process.stdout` in `runTui()`:<br />
 
 ```typescript
 const ENTER_ALT = '\x1b[?1049h';

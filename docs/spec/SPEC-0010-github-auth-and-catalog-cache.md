@@ -1,10 +1,10 @@
 # SPEC-0010 — GitHub Authentication and Session Catalog Cache
 
-**Product:** cerebro CLI
-**Status:** Accepted
-**Date:** 2026-04-05
-**Related ADRs:** [CLI-0003](../adr/CLI-0003-github-auth-and-catalog-cache.md)
-**Amends:** [SPEC-0003](SPEC-0003-provider.md) (adds `resolveGitHubToken`, amends `GitHubProvider` constructor), [SPEC-0007](SPEC-0007-tui.md) (amends `loadCatalogAndProceed`)
+**Product:** cerebro CLI<br />
+**Status:** Accepted<br />
+**Date:** 2026-04-05<br />
+**Related ADRs:** [CLI-0003](../adr/CLI-0003-github-auth-and-catalog-cache.md)<br />
+**Amends:** [SPEC-0003](SPEC-0003-provider.md) (adds `resolveGitHubToken`, amends `GitHubProvider` constructor), [SPEC-0007](SPEC-0007-tui.md) (amends `loadCatalogAndProceed`)<br />
 
 ---
 
@@ -18,13 +18,14 @@ Both features are transparent to the user — no configuration required, no new 
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - `resolveGitHubToken()` — tiered token lookup: env vars → `gh auth token`
 - Wiring the detected token into `GitHubProvider` via Octokit's `auth` option
 - `session.catalogCache` population and lookup in `app.tsx`
 
-**Out of scope:**
-- Private repository support (the token is used only for rate limit relief, not for auth-gated access)
+**Out of scope:**<br />
+- OAuth flows or interactive token acquisition
+- Token scope validation (GitHub enforces access; Cerebro passes the token through)
 - Persisting the catalog cache across sessions
 - Surfacing token status in the UI (no "authenticated as X" display)
 - OAuth flows or interactive authentication

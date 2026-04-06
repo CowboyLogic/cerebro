@@ -1,8 +1,8 @@
 # CLI-0001: Path Confinement as Non-Negotiable Security Layer
 
-**Level:** CLI
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** CLI<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 

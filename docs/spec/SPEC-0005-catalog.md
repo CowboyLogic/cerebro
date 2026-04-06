@@ -1,11 +1,11 @@
-# SPEC-0005 — Catalog
+# SPEC-0005 â€” Catalog
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** core
-**Depends on:** SPEC-0003 (Source Provider), `@cowboylogic/cerebro-schema` (CerebroCatalog, Artifact, validateCatalog)
-**Consumed by:** SPEC-0004 (Session — catalog cache), TUI TypeMenu + ItemList screens, CLI list command, MCP list_artifacts tool
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** core<br />
+**Depends on:** [SPEC-0003](SPEC-0003-provider.md) (Source Provider), `@cowboylogic/cerebro-schema` (CerebroCatalog, Artifact, validateCatalog)<br />
+**Consumed by:** [SPEC-0004](SPEC-0004-session.md) (Session â€” catalog cache), TUI TypeMenu + ItemList screens, CLI list command, MCP list_artifacts tool<br />
 
 ---
 
@@ -13,22 +13,22 @@
 
 Given a GitHub repository, returns a list of `Artifact` objects representing the installable items in that repo. Attempts to read and validate a `cerebro-catalog.yaml` from the repo root first. If the file is absent or invalid, falls back to heuristic scanning of the repository tree to detect skills and instructions by their structural markers.
 
-The catalog module is the sole entry point for artifact discovery — callers never interact with the GitHub client directly for this purpose.
+The catalog module is the sole entry point for artifact discovery â€” callers never interact with the GitHub client directly for this purpose.
 
 ---
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - Fetching and validating `cerebro-catalog.yaml` from a repo root
 - Heuristic scanning to detect skills (`SKILL.md` marker) and instructions (`*.instructions.md` files)
 - Synthesising `Artifact` objects from heuristic results
 - Filtering results by artifact type and keyword (name match)
 
-**Out of scope:**
-- Caching (handled by SPEC-0004 Session; the catalog module always fetches fresh unless the session supplies a cache hit)
-- Resolving install paths (SPEC-0001)
-- Performing installs (SPEC-0006)
+**Out of scope:**<br />
+- Caching (handled by [SPEC-0004](SPEC-0004-session.md) Session; the catalog module always fetches fresh unless the session supplies a cache hit)
+- Resolving install paths ([SPEC-0001](SPEC-0001-config.md))
+- Performing installs ([SPEC-0006](SPEC-0006-installer.md))
 - Deep content search (deferred to a future release)
 
 ---
@@ -84,12 +84,12 @@ When `cerebro-catalog.yaml` is absent or invalid, the heuristic scanner walks th
 ### Skill detection
 A directory is recognised as a **skill** if it contains a file named `SKILL.md` at its root level.
 
-**Scan locations (in order):**
+**Scan locations (in order):**<br />
 1. The repository root
 2. Any directory named `skills/` at the root
 3. Any directory named `agents/` at the root (skills may also live here per agentskills.io conventions)
 
-**Synthesised Artifact:**
+**Synthesised Artifact:**<br />
 - `type`: `'skill'`
 - `source`: relative path to the skill directory (e.g., `skills/git-commit-assistant/`)
 - `id`: directory name, lowercased, non-slug characters replaced with `-`, leading/trailing `-` stripped
@@ -100,12 +100,12 @@ A directory is recognised as a **skill** if it contains a file named `SKILL.md` 
 ### Instruction detection
 A file is recognised as an **instruction** if its name matches `*.instructions.md`.
 
-**Scan locations (in order):**
+**Scan locations (in order):**<br />
 1. The repository root
 2. Any directory named `instructions/` at the root
 3. `.github/instructions/` at the root (VS Code Copilot convention)
 
-**Synthesised Artifact:**
+**Synthesised Artifact:**<br />
 - `type`: `'instruction'`
 - `source`: relative path to the file (e.g., `instructions/python.instructions.md`)
 - `id`: filename without `.instructions.md` extension, lowercased, slugified
@@ -131,8 +131,8 @@ A file is recognised as an **instruction** if its name matches `*.instructions.m
 | CAT-REQ-0010 | MUST | If two artifacts would synthesise the same `id`, the second MUST have a numeric suffix appended (e.g., `python-2`). |
 | CAT-REQ-0011 | MUST | If `filter.type` is set, `fetchCatalog()` MUST return only artifacts whose `type` matches. |
 | CAT-REQ-0012 | MUST | If `filter.keyword` is set, `fetchCatalog()` MUST return only artifacts whose `name` contains the keyword (case-insensitive). |
-| CAT-REQ-0013 | MUST NOT | The catalog module MUST NOT filter by `supports` — that is the Installer's responsibility (SPEC-0006). The full list is returned so the UI can show all available artifacts regardless of the user's selected target. |
-| CAT-REQ-0014 | SHOULD | The heuristic scanner SHOULD read `SKILL.md` content only to extract the description; it SHOULD NOT fail if the file is unreadable — omit the description field instead. |
+| CAT-REQ-0013 | MUST NOT | The catalog module MUST NOT filter by `supports` â€” that is the Installer's responsibility ([SPEC-0006](SPEC-0006-installer.md)). The full list is returned so the UI can show all available artifacts regardless of the user's selected target. |
+| CAT-REQ-0014 | SHOULD | The heuristic scanner SHOULD read `SKILL.md` content only to extract the description; it SHOULD NOT fail if the file is unreadable â€” omit the description field instead. |
 
 ---
 
@@ -140,10 +140,10 @@ A file is recognised as an **instruction** if its name matches `*.instructions.m
 
 | Condition | Error type | Behaviour |
 |-----------|-----------|-----------|
-| Network failure fetching catalog file | `NetworkError` (from SPEC-0003) | Propagated to caller |
-| Heuristic scan finds no recognisable artifacts | — | Returns `{ source: 'heuristic', artifacts: [] }` — not an error |
-| Catalog YAML is present but unparseable | — | Falls back to heuristic; logs parse error details at debug level |
-| Catalog is valid YAML but fails schema validation | — | Falls back to heuristic; logs validation errors at debug level |
+| Network failure fetching catalog file | `NetworkError` (from [SPEC-0003](SPEC-0003-provider.md)) | Propagated to caller |
+| Heuristic scan finds no recognisable artifacts | â€” | Returns `{ source: 'heuristic', artifacts: [] }` â€” not an error |
+| Catalog YAML is present but unparseable | â€” | Falls back to heuristic; logs parse error details at debug level |
+| Catalog is valid YAML but fails schema validation | â€” | Falls back to heuristic; logs validation errors at debug level |
 
 ---
 

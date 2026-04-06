@@ -1,8 +1,8 @@
 # S-0006: Design-First Development Process
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -14,7 +14,7 @@ The goal of the suite is not feature novelty; it is to solve the same problem co
 
 All new features and significant changes across the Cerebro suite follow this order, without exception:
 
-**Design → Specification → Tests → Code**
+**Design → Specification → Tests → Code**<br />
 
 1. **Design** — The problem is understood. Significant decisions are captured as ADRs. The suite design brief is updated if scope or goals change. No specification work begins until the design is stable enough to write against.
 
@@ -28,13 +28,13 @@ All new features and significant changes across the Cerebro suite follow this or
 
 ## Rationale
 
-**Specifications before tests, not after.** Tests written against existing code verify what the code does, not what it should do. The distinction matters: a bug baked in early becomes a test expectation, and the test suite becomes a specification of the wrong behavior.
+**Specifications before tests, not after.** Tests written against existing code verify what the code does, not what it should do. The distinction matters: a bug baked in early becomes a test expectation, and the test suite becomes a specification of the wrong behavior.<br />
 
-**Interface/contract + requirements, not a rigid functional spec.** A full functional spec that prescribes every interaction leaves no room for implementation judgment and becomes outdated quickly. The contract defines what callers depend on; requirements define what must be true. Both are stable. How the code achieves them is not prescribed.
+**Interface/contract + requirements, not a rigid functional spec.** A full functional spec that prescribes every interaction leaves no room for implementation judgment and becomes outdated quickly. The contract defines what callers depend on; requirements define what must be true. Both are stable. How the code achieves them is not prescribed.<br />
 
-**Consistency across ecosystems is the goal.** Each Cerebro product (CLI, VSCode extension, future IDE extensions) solves the same problem in a different surface. Shared specifications ensure they solve it the same way — same requirements, same contracts, different implementations.
+**Consistency across ecosystems is the goal.** Each Cerebro product (CLI, VSCode extension, future IDE extensions) solves the same problem in a different surface. Shared specifications ensure they solve it the same way — same requirements, same contracts, different implementations.<br />
 
-**Tests derive from specs, not the other way around.** Requirement traceability means any test failure points directly to a specific requirement. Any untested requirement is visibly incomplete. There is no ambiguity about what the test suite covers.
+**Tests derive from specs, not the other way around.** Requirement traceability means any test failure points directly to a specific requirement. Any untested requirement is visibly incomplete. There is no ambiguity about what the test suite covers.<br />
 
 ## Consequences
 

@@ -1,11 +1,11 @@
-# SPEC-0002 — Install Manifest
+# SPEC-0002 â€” Install Manifest
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** core
-**Depends on:** `@cowboylogic/cerebro-schema` (ArtifactType, ToolId, Scope)
-**Consumed by:** SPEC-0004 (Session), SPEC-0006 (Installer), TUI ItemList screen
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** core<br />
+**Depends on:** `@cowboylogic/cerebro-schema` (ArtifactType, ToolId, Scope)<br />
+**Consumed by:** [SPEC-0004](SPEC-0004-session.md) (Session), [SPEC-0006](SPEC-0006-installer.md) (Installer), TUI ItemList screen<br />
 
 ---
 
@@ -19,14 +19,14 @@ The manifest is intentionally separate from the config file because it changes o
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - Loading and saving `~/.config/cerebro/installed.yaml`
 - Adding, removing, and querying installed entries
 - Computing the display status of an artifact relative to a source repo and install path
 
-**Out of scope:**
-- Resolving install paths (SPEC-0001)
-- Performing the actual file installation (SPEC-0006)
+**Out of scope:**<br />
+- Resolving install paths ([SPEC-0001](SPEC-0001-config.md))
+- Performing the actual file installation ([SPEC-0006](SPEC-0006-installer.md))
 - Any network activity
 
 ---
@@ -55,7 +55,7 @@ export interface InstalledEntry {
   installedAt: string;
   /**
    * Git tree SHA of the artifact at time of install (for skills: directory tree SHA;
-   * for instructions: blob SHA). Optional in MVP — populated when available from the
+   * for instructions: blob SHA). Optional in MVP â€” populated when available from the
    * GitHub API response. Reserved for update detection in a future release: compare
    * this value against the current remote SHA to determine if a newer version exists.
    */
@@ -69,10 +69,10 @@ export interface InstallManifest {
 /**
  * Artifact status as displayed in the item list.
  *
- * - 'available'  — nothing at the install path; safe to install
- * - 'installed'  — Cerebro installed this artifact from this source repo; path verified
- * - 'conflict'   — Cerebro installed this artifact from a *different* source repo
- * - 'exists'     — something exists at the install path but Cerebro did not install it
+ * - 'available'  â€” nothing at the install path; safe to install
+ * - 'installed'  â€” Cerebro installed this artifact from this source repo; path verified
+ * - 'conflict'   â€” Cerebro installed this artifact from a *different* source repo
+ * - 'exists'     â€” something exists at the install path but Cerebro did not install it
  */
 export type ArtifactStatus = 'available' | 'installed' | 'conflict' | 'exists';
 
@@ -109,11 +109,11 @@ export function removeEntry(
  *
  * Logic:
  * 1. Check whether `installPath` exists on disk.
- *    - Does not exist → 'available'
- * 2. Path exists — check manifest for an entry matching id + target + scope.
- *    - Entry found, sourceUrl matches → 'installed'  (path already verified in step 1)
- *    - Entry found, sourceUrl differs → 'conflict'
- *    - No entry found → 'exists'
+ *    - Does not exist â†’ 'available'
+ * 2. Path exists â€” check manifest for an entry matching id + target + scope.
+ *    - Entry found, sourceUrl matches â†’ 'installed'  (path already verified in step 1)
+ *    - Entry found, sourceUrl differs â†’ 'conflict'
+ *    - No entry found â†’ 'exists'
  * 3. If 'installed' is returned but the path does not exist (stale entry): remove the
  *    stale entry from the manifest, save, and return 'available'.
  */
@@ -158,6 +158,6 @@ export function getArtifactStatus(
 
 ## Notes
 
-- Status is computed on the fly at browse time — it is not stored in the manifest. This ensures the status always reflects the current filesystem state.
-- `getArtifactStatus()` takes the fully-resolved absolute `installPath` as input. Path resolution is the responsibility of SPEC-0001 (`resolveInstallBase`) and SPEC-0006 (Installer), not this module.
+- Status is computed on the fly at browse time â€” it is not stored in the manifest. This ensures the status always reflects the current filesystem state.
+- `getArtifactStatus()` takes the fully-resolved absolute `installPath` as input. Path resolution is the responsibility of [SPEC-0001](SPEC-0001-config.md) (`resolveInstallBase`) and [SPEC-0006](SPEC-0006-installer.md) (Installer), not this module.
 - The `conflict` status refers specifically to conflicts Cerebro is aware of (i.e., Cerebro installed something from repo A, and repo B has an artifact with the same id). Manually created items with no manifest entry show as `exists`, not `conflict`.

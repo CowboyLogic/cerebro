@@ -1,11 +1,11 @@
-# SPEC-0008 — CLI Mode
+# SPEC-0008 â€” CLI Mode
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** cli
-**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0004 (Session), SPEC-0005 (Catalog), SPEC-0006 (Installer)
-**Consumed by:** `src/index.ts` (entry point when arguments are present)
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** cli<br />
+**Depends on:** [SPEC-0001](SPEC-0001-config.md) (Config), [SPEC-0002](SPEC-0002-manifest.md) (Manifest), [SPEC-0004](SPEC-0004-session.md) (Session), [SPEC-0005](SPEC-0005-catalog.md) (Catalog), [SPEC-0006](SPEC-0006-installer.md) (Installer)<br />
+**Consumed by:** `src/index.ts` (entry point when arguments are present)<br />
 
 ---
 
@@ -17,16 +17,16 @@ The CLI mode provides a non-interactive, fully parameterised interface to Cerebr
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - Command definitions and argument schemas
 - Non-interactive install, list, and source management operations
 - `--trust`, `--persist`, `--overwrite`, `--filter` flags
 - Structured exit codes
 - Plain-text and JSON output modes
 
-**Out of scope:**
-- Interactive prompts or arrow-key navigation (SPEC-0007)
-- MCP protocol framing (SPEC-0009)
+**Out of scope:**<br />
+- Interactive prompts or arrow-key navigation ([SPEC-0007](SPEC-0007-tui.md))
+- MCP protocol framing ([SPEC-0009](SPEC-0009-mcp.md))
 - Business logic (all operations delegate to core modules)
 
 ---
@@ -66,30 +66,30 @@ Examples:
   cerebro install --source https://github.com/anthropics/skills --id git-commit-assistant --target claude-code --trust --persist
 ```
 
-**Behaviour:**
-1. `createSession()` — exit code 1 on `ConfigParseError` / `ManifestParseError`
+**Behaviour:**<br />
+1. `createSession()` â€” exit code 1 on `ConfigParseError` / `ManifestParseError`
 2. If `--trust`: call `trustSource()` and `saveConfig()` before any fetch
 3. If source is not trusted and `--trust` not provided: print trust warning and exit code 3 (requires explicit trust)
 4. If `--persist`: call `setTarget(persist: true)` and `setScope(persist: true)`
-5. Fetch catalog via `fetchCatalog()` (SPEC-0005)
+5. Fetch catalog via `fetchCatalog()` ([SPEC-0005](SPEC-0005-catalog.md))
 6. Find artifact by `id` in results; if not found: exit code 1 with message
-7. Call `installArtifact()` (SPEC-0006)
+7. Call `installArtifact()` ([SPEC-0006](SPEC-0006-installer.md))
 8. Print outcome and exit with appropriate code
 
-**Output (success):**
+**Output (success):**<br />
 ```
-✓ Installed git-commit-assistant → .claude/commands/git-commit-assistant/
+âœ“ Installed git-commit-assistant â†’ .claude/commands/git-commit-assistant/
 ```
 
-**Output (skipped — exists):**
+**Output (skipped â€” exists):**<br />
 ```
-⚠ Skipped: git-commit-assistant already exists at .claude/commands/git-commit-assistant/
+âš  Skipped: git-commit-assistant already exists at .claude/commands/git-commit-assistant/
   Use --overwrite to replace it.
 ```
 
-**Output (skipped — conflict):**
+**Output (skipped â€” conflict):**<br />
 ```
-⚠ Skipped: git-commit-assistant exists but was installed from a different source.
+âš  Skipped: git-commit-assistant exists but was installed from a different source.
   Source on disk: https://github.com/other/repo
   Use --overwrite to replace it.
 ```
@@ -115,7 +115,7 @@ Examples:
   cerebro list --source https://github.com/anthropics/skills --json
 ```
 
-**Output (plain text):**
+**Output (plain text):**<br />
 ```
 Source: https://github.com/anthropics/skills  (heuristic)
 
@@ -124,10 +124,10 @@ Source: https://github.com/anthropics/skills  (heuristic)
   skill   python-debugger          Python Debugger          (Installed)
   skill   code-reviewer            Code Reviewer            (Exists)
 
-4 artifacts  ·  1 installed  ·  1 exists
+4 artifacts  Â·  1 installed  Â·  1 exists
 ```
 
-**Output (--json):**
+**Output (--json):**<br />
 ```json
 [
   {
@@ -152,12 +152,12 @@ cerebro sources
   --json    Output as JSON
 ```
 
-**Output:**
+**Output:**<br />
 ```
 Configured sources:
 
-  ✓ anthropics/skills       https://github.com/anthropics/skills        trusted
-  ✓ awesome-copilot         https://github.com/github/awesome-copilot   not trusted
+  âœ“ anthropics/skills       https://github.com/anthropics/skills        trusted
+  âœ“ awesome-copilot         https://github.com/github/awesome-copilot   not trusted
 ```
 
 ---
@@ -200,7 +200,7 @@ cerebro status
   --json              Output as JSON
 
 Output:
-  git-commit-assistant  →  .claude/commands/git-commit-assistant/  (Installed)
+  git-commit-assistant  â†’  .claude/commands/git-commit-assistant/  (Installed)
 ```
 
 ---
@@ -211,8 +211,8 @@ Output:
 |------|---------|
 | `0` | Success |
 | `1` | Error (config corrupt, network failure, artifact not found, write failure) |
-| `2` | Skipped — artifact already exists at destination; use `--overwrite` to replace |
-| `3` | Trust required — source is not trusted; use `--trust` to bypass warning |
+| `2` | Skipped â€” artifact already exists at destination; use `--overwrite` to replace |
+| `3` | Trust required â€” source is not trusted; use `--trust` to bypass warning |
 
 ---
 
@@ -233,7 +233,7 @@ Output:
 | CLI-REQ-0011 | MUST | All commands MUST be implemented using Commander v13. |
 | CLI-REQ-0012 | SHOULD | Successful install output SHOULD include the resolved destination path so the user knows exactly where the artifact landed. |
 | CLI-REQ-0013 | MUST | All error, warning, and diagnostic output MUST be written to `stderr`. `stdout` is reserved for command results (plain text output or JSON). This applies in all output modes, not only `--json`. |
-| CLI-REQ-0014 | MUST | Commander's default help and argument-error output (which goes to `stdout`) is acceptable in CLI mode. It MUST only be reachable after mode detection has confirmed this is not an MCP invocation (see SPEC-0009 MCP-REQ-0013). |
+| CLI-REQ-0014 | MUST | Commander's default help and argument-error output (which goes to `stdout`) is acceptable in CLI mode. It MUST only be reachable after mode detection has confirmed this is not an MCP invocation (see [SPEC-0009](SPEC-0009-mcp.md) MCP-REQ-0013). |
 
 ---
 
@@ -247,5 +247,5 @@ Output:
 | Artifact ID not found | 1 | `Artifact '{id}' not found in {url}. Run 'cerebro list --source {url}' to see available artifacts.` |
 | Artifact skipped (exists) | 2 | `Artifact '{id}' already exists at {path}. Use --overwrite to replace it.` |
 | Artifact skipped (unsupported target) | 2 | `Artifact '{id}' does not support target '{target}'. Check artifact's supports list.` |
-| Network error | 1 | Network error message from SPEC-0003 |
-| Rate limit | 1 | Rate limit message from SPEC-0003 |
+| Network error | 1 | Network error message from [SPEC-0003](SPEC-0003-provider.md) |
+| Rate limit | 1 | Rate limit message from [SPEC-0003](SPEC-0003-provider.md) |

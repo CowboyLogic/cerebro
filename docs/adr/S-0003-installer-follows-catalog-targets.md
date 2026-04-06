@@ -1,8 +1,8 @@
 # S-0003: Installer Follows Catalog-Declared Target Paths
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -16,11 +16,11 @@ The installer layer reads `compatibility[].files[].target` from the catalog entr
 
 ## Rationale
 
-**Control belongs with catalog authors.** The people who maintain an artifact repository are best positioned to know where their files should be installed for each tool. Hardcoding that knowledge in the installer creates a dependency inversion.
+**Control belongs with catalog authors.** The people who maintain an artifact repository are best positioned to know where their files should be installed for each tool. Hardcoding that knowledge in the installer creates a dependency inversion.<br />
 
-**New tool support without installer changes.** Adding a new `ToolId` to the schema (e.g., a new AI assistant) does not require changes to any installer. The catalog author declares targets for that tool; the installer executes them generically.
+**New tool support without installer changes.** Adding a new `ToolId` to the schema (e.g., a new AI assistant) does not require changes to any installer. The catalog author declares targets for that tool; the installer executes them generically.<br />
 
-**Heuristic fallback as best-effort.** When no catalog is present, heuristic discovery synthesizes target paths using `defaultTargetPath()`. These synthesized paths encode current community conventions but are explicitly second-class — catalog-declared paths always win.
+**Heuristic fallback as best-effort.** When no catalog is present, heuristic discovery synthesizes target paths using `defaultTargetPath()`. These synthesized paths encode current community conventions but are explicitly second-class — catalog-declared paths always win.<br />
 
 Alternatives considered:
 - **Keep per-tool installer classes, driven by catalog metadata** — rejected; the catalog-driven dispatch still leaks tool-specific logic into the installer.

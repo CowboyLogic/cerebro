@@ -1,17 +1,17 @@
-# SPEC-0003 — Source Provider
+# SPEC-0003 â€” Source Provider
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** core
-**Depends on:** none
-**Consumed by:** SPEC-0004 (Session), SPEC-0005 (Catalog), SPEC-0006 (Installer)
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** core<br />
+**Depends on:** none<br />
+**Consumed by:** [SPEC-0004](SPEC-0004-session.md) (Session), [SPEC-0005](SPEC-0005-catalog.md) (Catalog), [SPEC-0006](SPEC-0006-installer.md) (Installer)<br />
 
 ---
 
 ## Overview
 
-Defines the `SourceProvider` interface — the contract that any source repository host must satisfy for Cerebro to browse and download artifacts from it. The MVP ships one concrete implementation: `GitHubProvider`. Future providers (GitLab, Bitbucket, Azure DevOps, etc.) implement the same interface without changes to any other module.
+Defines the `SourceProvider` interface â€” the contract that any source repository host must satisfy for Cerebro to browse and download artifacts from it. The MVP ships one concrete implementation: `GitHubProvider`. Future providers (GitLab, Bitbucket, Azure DevOps, etc.) implement the same interface without changes to any other module.
 
 A factory function (`createProvider`) detects the correct provider from a source URL's domain and returns a provider instance. Provider instances are cached per domain for the session to avoid redundant initialisation.
 
@@ -21,19 +21,19 @@ No module outside this one has any knowledge of GitHub-specific APIs, endpoints,
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - The `SourceProvider` interface (the binding contract for all providers)
-- `RepoItem` — the provider-agnostic representation of a repository item
-- `createProvider(url)` — factory that detects provider from URL and returns an instance
-- `GitHubProvider` — MVP concrete implementation for `github.com`
+- `RepoItem` â€” the provider-agnostic representation of a repository item
+- `createProvider(url)` â€” factory that detects provider from URL and returns an instance
+- `GitHubProvider` â€” MVP concrete implementation for `github.com`
 - Session-scoped in-memory response caching (per provider instance)
 - Input validation of owner and repo identifiers
 
-**Out of scope:**
-- Authentication / private repositories (MVP is public only)
-- Parsing catalog files or detecting artifact types (SPEC-0005)
-- Resolving install paths (SPEC-0001)
-- Writing to the install manifest (SPEC-0002)
+**Out of scope:**<br />
+- OAuth flows or interactive token acquisition
+- Parsing catalog files or detecting artifact types ([SPEC-0005](SPEC-0005-catalog.md))
+- Resolving install paths ([SPEC-0001](SPEC-0001-config.md))
+- Writing to the install manifest ([SPEC-0002](SPEC-0002-manifest.md))
 
 ---
 
@@ -54,7 +54,7 @@ export interface RepoItem {
   downloadUrl: string | null;
   /**
    * Provider's content hash / tree SHA for this item.
-   * Used for cache keying and — when stored in the manifest — update detection.
+   * Used for cache keying and â€” when stored in the manifest â€” update detection.
    */
   sha: string;
 }
@@ -112,14 +112,14 @@ export interface SourceProvider {
  * Works for any supported provider URL format.
  *
  * Example: parseRepoUrl('https://github.com/anthropics/skills')
- *   → { owner: 'anthropics', repo: 'skills' }
+ *   â†’ { owner: 'anthropics', repo: 'skills' }
  */
 export function parseRepoUrl(url: string): { owner: string; repo: string };
 
 /**
  * Returns a SourceProvider instance appropriate for the given URL.
  * Detects the provider from the URL domain.
- * Provider instances are cached by domain — subsequent calls with the
+ * Provider instances are cached by domain â€” subsequent calls with the
  * same domain return the same instance.
  *
  * Throws UnsupportedProviderError if the URL's domain is not supported.
@@ -138,10 +138,10 @@ export class UnsupportedProviderError extends Error {
  * source without exposing the token value.
  *
  * Detection order (first match wins):
- *   1. process.env.GITHUB_TOKEN → 'GITHUB_TOKEN'
- *   2. process.env.GH_TOKEN     → 'GH_TOKEN'
- *   3. `gh auth token` succeeds  → 'gh CLI'
- *   4. (none of the above)       → 'none'
+ *   1. process.env.GITHUB_TOKEN â†’ 'GITHUB_TOKEN'
+ *   2. process.env.GH_TOKEN     â†’ 'GH_TOKEN'
+ *   3. `gh auth token` succeeds  â†’ 'gh CLI'
+ *   4. (none of the above)       â†’ 'none'
  *
  * MUST NOT return the token string itself.
  */
@@ -154,7 +154,7 @@ export function resolveGitHubTokenSource(): 'GITHUB_TOKEN' | 'GH_TOKEN' | 'gh CL
 
 The `GitHubProvider` handles all `github.com` URLs. It is the only provider shipped in the MVP.
 
-**Implementation details (informative, not binding):**
+**Implementation details (informative, not binding):**<br />
 - Uses `@octokit/rest` for HTTP (header management, response parsing, TypeScript types)
 - API base: `https://api.github.com/repos/{owner}/{repo}/contents/{path}`
 - Response caching: in-memory `Map<string, RepoItem[] | string>` keyed by `owner/repo/path`
@@ -177,7 +177,7 @@ The `GitHubProvider` handles all `github.com` URLs. It is the only provider ship
 | PRV-REQ-0005 | MUST | `downloadDirectory()` MUST recursively traverse all subdirectories and download all files, preserving structure under `destPath`. |
 | PRV-REQ-0006 | MUST NOT | `downloadDirectory()` and `downloadFile()` MUST NOT write any file outside of `destPath`. Every resolved write path MUST be checked with `assertConfined(destPath, resolvedPath)` before writing. |
 | PRV-REQ-0007 | MUST NOT | Providers MUST NOT write to `stdout`. All diagnostic output MUST use `stderr` or be suppressed (MCP-REQ-0014). |
-| PRV-REQ-0008 | MUST NOT | Providers MUST NOT support private repositories in the MVP. A 401 / authentication-required response MUST surface as `PrivateRepoError`. |
+| PRV-REQ-0008 | MUST | A 401 response (invalid or expired token) MUST surface as `PrivateRepoError`. Private repositories are accessible when the token has the required scopes — access is determined by GitHub, not by Cerebro. |
 
 ### Factory Requirements
 
@@ -207,11 +207,11 @@ The `GitHubProvider` handles all `github.com` URLs. It is the only provider ship
 |-----------|-----------|----------------------|
 | Unsupported URL domain | `UnsupportedProviderError` | `'{domain}' is not a supported source provider. Supported: github.com` |
 | Invalid owner / repo | `InvalidRepoIdentifierError` | `Invalid repository identifier: '{value}'. Only alphanumeric characters, hyphens, underscores, and dots are allowed.` |
-| Repo not found / inaccessible | `RepoNotFoundError` | `Repository '{owner}/{repo}' not found. Make sure it exists and is public.` |
-| Private repo (401) | `PrivateRepoError` | `'{owner}/{repo}' appears to be private. Cerebro currently supports public repositories only.` |
+| Repo not found / inaccessible | `RepoNotFoundError` | `Repository '{owner}/{repo}' not found or inaccessible. Make sure it exists and that your token has access to it.` |
+| Invalid / expired token (401) | `PrivateRepoError` | `Authentication failed for '{owner}/{repo}'. Your token may be invalid or expired.` |
 | Rate limit (403/429) | `RateLimitError` | `Rate limit reached. Please wait a few minutes. Unauthenticated requests are limited to 60/hour.` |
 | Network failure | `NetworkError` | `Unable to reach {domain}. Check your internet connection and try again.` |
-| Write path escapes destPath | `PathConfinementError` | (internal — never user-visible; indicates a Cerebro bug) |
+| Write path escapes destPath | `PathConfinementError` | (internal â€” never user-visible; indicates a Cerebro bug) |
 
 ---
 

@@ -1,0 +1,128 @@
+site_name: Cerebro
+site_description: Discover and install AI artifacts — skills, agents, instructions, and more — from GitHub into your AI coding tools
+site_author: CowboyLogic
+site_url: https://cowboylogic.github.io/cerebro
+
+# Repository
+repo_name: CowboyLogic/cerebro
+repo_url: https://github.com/CowboyLogic/cerebro
+edit_uri: edit/develop/docs/
+
+# Copyright
+copyright: Copyright &copy; 2026 CowboyLogic
+
+# Configuration
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - toc.follow
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+
+# Extensions
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+      title: On this page
+
+# Plugins
+plugins:
+  - callouts:
+      aliases: false
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - tags
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/CowboyLogic
+  generator: false
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+      - Interactive TUI: user-guide/tui.md
+      - CLI Reference: user-guide/cli-reference.md
+      - Configuration: user-guide/configuration.md
+  - Catalog Format: catalog-format.md
+  - Developer:
+      - Contributing: developer/contributing.md
+      - Architecture: developer/architecture.md
+  - Design:
+      - Suite Brief: design/suite-brief.md
+  - Architecture Decisions:
+      - Overview: adr/README.md
+      - Suite ADRs:
+          - S-0001 Schema Single Source of Truth: adr/S-0001-schema-package-single-source-of-truth.md
+          - S-0002 Catalog Format Standard: adr/S-0002-catalog-format-standard.md
+          - S-0003 Installer Follows Catalog Targets: adr/S-0003-installer-follows-catalog-targets.md
+          - S-0004 Catalog-First Heuristic Fallback: adr/S-0004-catalog-first-heuristic-fallback-discovery.md
+          - S-0005 CLI as Documentation Home: adr/S-0005-cli-as-documentation-home.md
+          - S-0006 Design-First Development: adr/S-0006-design-first-development-process.md
+          - S-0007 Schema Versioning Strategy: adr/S-0007-schema-versioning-strategy.md
+          - S-0008 Developer Workflow: adr/S-0008-developer-workflow.md
+      - CLI ADRs:
+          - CLI-0001 Path Confinement Security: adr/CLI-0001-path-confinement-security.md
+          - CLI-0002 TUI Centralised State Machine: adr/CLI-0002-tui-centralized-state-machine.md
+          - CLI-0003 GitHub Auth and Catalog Cache: adr/CLI-0003-github-auth-and-catalog-cache.md
+  - Specifications:
+      - SPEC-0001 Configuration: spec/SPEC-0001-config.md
+      - SPEC-0002 Manifest: spec/SPEC-0002-manifest.md
+      - SPEC-0003 Provider: spec/SPEC-0003-provider.md
+      - SPEC-0004 Session: spec/SPEC-0004-session.md
+      - SPEC-0005 Catalog: spec/SPEC-0005-catalog.md
+      - SPEC-0006 Installer: spec/SPEC-0006-installer.md
+      - SPEC-0007 TUI: spec/SPEC-0007-tui.md
+      - SPEC-0008 CLI: spec/SPEC-0008-cli.md
+      - SPEC-0009 MCP: spec/SPEC-0009-mcp.md
+      - SPEC-0010 GitHub Auth and Catalog Cache: spec/SPEC-0010-github-auth-and-catalog-cache.md
+  - Contributing: developer/contributing.md
+
+# Extra CSS
+extra_css:
+  - stylesheets/extra.css

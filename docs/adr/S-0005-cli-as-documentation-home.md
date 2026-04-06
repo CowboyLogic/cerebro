@@ -1,8 +1,8 @@
 # S-0005: CLI as Suite Documentation Home
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -23,11 +23,11 @@ Each product repository maintains its own `docs/` directory for implementation-s
 
 ## Rationale
 
-**CLI is the most accessible entry point.** New users encounter Cerebro most often through the CLI (`npx cerebro` or `npm install -g cerebro`). Placing authoritative docs here means the most likely first contact also leads to the most complete picture.
+**CLI is the most accessible entry point.** New users encounter Cerebro most often through the CLI (`npx cerebro` or `npm install -g cerebro`). Placing authoritative docs here means the most likely first contact also leads to the most complete picture.<br />
 
-**Single place for suite-wide governance.** ADRs that affect all products need a home with unambiguous authority. A neutral "docs repo" would require everyone to check a separate repo with no code; the CLI repo is already a working product that everyone on the project touches.
+**Single place for suite-wide governance.** ADRs that affect all products need a home with unambiguous authority. A neutral "docs repo" would require everyone to check a separate repo with no code; the CLI repo is already a working product that everyone on the project touches.<br />
 
-**Avoids a proliferation of cross-repo docs PRs.** Suite-level content in the CLI repo means a decision change requires one PR in one repo, not coordinated PRs across six.
+**Avoids a proliferation of cross-repo docs PRs.** Suite-level content in the CLI repo means a decision change requires one PR in one repo, not coordinated PRs across six.<br />
 
 Alternatives considered:
 - **Dedicated `cerebro-docs` repository** — rejected; adds a seventh repo to maintain, separates docs from the most-used product, and creates a "no code lives here" orphan repo.

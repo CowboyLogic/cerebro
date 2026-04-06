@@ -75,7 +75,7 @@ const installArtifactSchema = {
 };
 
 const addSourceSchema = {
-  url: z.string().url().describe('Public GitHub repository URL'),
+  url: z.string().url().describe('GitHub repository URL'),  
   name: z.string().optional().describe('Display name for this source'),
   trust: z.boolean().default(false).describe('Also mark source as trusted'),
 };

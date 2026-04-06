@@ -1,11 +1,11 @@
-# SPEC-0001 — Configuration Manager
+# SPEC-0001 â€” Configuration Manager
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** core
-**Depends on:** `@cowboylogic/cerebro-schema` (ToolId, ArtifactType, Scope)
-**Consumed by:** SPEC-0004 (Session), SPEC-0006 (Installer), all TUI/CLI/MCP modes
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** core<br />
+**Depends on:** `@cowboylogic/cerebro-schema` (ToolId, ArtifactType, Scope)<br />
+**Consumed by:** [SPEC-0004](SPEC-0004-session.md) (Session), [SPEC-0006](SPEC-0006-installer.md) (Installer), all TUI/CLI/MCP modes<br />
 
 ---
 
@@ -17,16 +17,16 @@ Manages Cerebro's user configuration file at `~/.config/cerebro/config.yaml`. On
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - Locating, creating, loading, and saving `config.yaml`
 - Merging user overrides with bundled defaults
 - Resolving install paths for a given tool + artifact type + scope combination
 - Providing the structured config object to the rest of the application
 
-**Out of scope:**
+**Out of scope:**<br />
 - Validating source URLs (that is the GitHub module's responsibility)
-- Reading or writing the install manifest (SPEC-0002)
-- Session-level state (SPEC-0004)
+- Reading or writing the install manifest ([SPEC-0002](SPEC-0002-manifest.md))
+- Session-level state ([SPEC-0004](SPEC-0004-session.md))
 
 ---
 
@@ -36,8 +36,8 @@ Manages Cerebro's user configuration file at `~/.config/cerebro/config.yaml`. On
 # ~/.config/cerebro/config.yaml
 
 defaults:
-  target: claude-code       # ToolId — pre-selected target for TUI sessions
-  scope: workspace          # Scope — pre-selected scope for TUI sessions
+  target: claude-code       # ToolId â€” pre-selected target for TUI sessions
+  scope: workspace          # Scope â€” pre-selected scope for TUI sessions
 
 sources:
   - name: anthropic-skills
@@ -174,12 +174,12 @@ export function addSource(config: CerebroConfig, entry: SourceEntry): CerebroCon
 |-----------|-------|----------------------|
 | Config file exists but is not valid YAML | `ConfigParseError` | `Config file at ~/.config/cerebro/config.yaml could not be parsed. Please check for syntax errors or delete the file to reset to defaults.` |
 | Config directory cannot be created (permissions) | `ConfigWriteError` | `Unable to create config directory at ~/.config/cerebro/. Check directory permissions.` |
-| `trustSource()` called with unknown URL | `SourceNotFoundError` | (internal — not user-visible directly) |
+| `trustSource()` called with unknown URL | `SourceNotFoundError` | (internal â€” not user-visible directly) |
 
 ---
 
 ## Notes
 
-- The `targets` override structure in the config file only needs to contain keys the user has explicitly changed. The YAML does not need to enumerate every tool/type/scope combination — absent keys resolve to bundled defaults at runtime.
+- The `targets` override structure in the config file only needs to contain keys the user has explicitly changed. The YAML does not need to enumerate every tool/type/scope combination â€” absent keys resolve to bundled defaults at runtime.
 - `~` expansion uses `os.homedir()` from Node's `node:os` module; it is not shell-expanded.
 - The bundled defaults are a TypeScript constant (not a bundled YAML file) to avoid file-path issues with packaged distributions.

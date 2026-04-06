@@ -11,3 +11,7 @@ agent-output/
 .agents/
 .github/skills/
 .claude/commands/
+
+# mkdocs test site
+site/
+

@@ -1,11 +1,11 @@
-# SPEC-0009 — MCP Mode
+# SPEC-0009 â€” MCP Mode
 
-**Product:** cerebro CLI
-**Status:** Draft
-**Date:** 2026-03-29
-**Area:** mcp
-**Depends on:** SPEC-0001 (Config), SPEC-0002 (Manifest), SPEC-0004 (Session), SPEC-0005 (Catalog), SPEC-0006 (Installer)
-**Consumed by:** `src/index.ts` (entry point when `--mcp` flag is present); AI agents via MCP protocol
+**Product:** cerebro CLI<br />
+**Status:** Draft<br />
+**Date:** 2026-03-29<br />
+**Area:** mcp<br />
+**Depends on:** [SPEC-0001](SPEC-0001-config.md) (Config), [SPEC-0002](SPEC-0002-manifest.md) (Manifest), [SPEC-0004](SPEC-0004-session.md) (Session), [SPEC-0005](SPEC-0005-catalog.md) (Catalog), [SPEC-0006](SPEC-0006-installer.md) (Installer)<br />
+**Consumed by:** `src/index.ts` (entry point when `--mcp` flag is present); AI agents via MCP protocol<br />
 
 ---
 
@@ -19,17 +19,17 @@ This mode enables agents to autonomously install skills and instructions without
 
 ## Scope
 
-**In scope:**
+**In scope:**<br />
 - MCP server startup and stdio transport
 - Tool definitions with zod schemas
 - Mapping MCP tool calls to core module operations
 - Structured JSON responses for all tools
 - Trust handling in an agent context
 
-**Out of scope:**
-- Interactive prompts or TUI rendering (SPEC-0007)
-- CLI argument parsing for non-MCP commands (SPEC-0008)
-- Authentication / private repositories (MVP)
+**Out of scope:**<br />
+- Interactive prompts or TUI rendering ([SPEC-0007](SPEC-0007-tui.md))
+- CLI argument parsing for non-MCP commands ([SPEC-0008](SPEC-0008-cli.md))
+- OAuth flows or interactive token acquisition
 
 ---
 
@@ -39,13 +39,13 @@ This mode enables agents to autonomously install skills and instructions without
 cerebro --mcp
 ```
 
-The process starts in MCP mode, opens a `StdioServerTransport`, and waits for tool calls. All diagnostic output (startup message, debug logs) MUST be written to `stderr` — `stdout` is reserved exclusively for the JSON-RPC stream.
+The process starts in MCP mode, opens a `StdioServerTransport`, and waits for tool calls. All diagnostic output (startup message, debug logs) MUST be written to `stderr` â€” `stdout` is reserved exclusively for the JSON-RPC stream.
 
-**Mode detection must happen first.** `src/index.ts` MUST check for the `--mcp` flag before Commander parses any arguments. Commander writes help text and argument validation errors to `stdout` by default — if Commander runs before mode detection, even a malformed invocation could write to `stdout` and corrupt the JSON-RPC stream before the server starts.
+**Mode detection must happen first.** `src/index.ts` MUST check for the `--mcp` flag before Commander parses any arguments. Commander writes help text and argument validation errors to `stdout` by default â€” if Commander runs before mode detection, even a malformed invocation could write to `stdout` and corrupt the JSON-RPC stream before the server starts.<br />
 
 Correct pattern:
 ```typescript
-// src/index.ts — mode detection BEFORE Commander
+// src/index.ts â€” mode detection BEFORE Commander
 if (process.argv.includes('--mcp')) {
   runMcpServer().catch(console.error); // catch goes to stderr
 } else {
@@ -78,9 +78,9 @@ mcpServers:
 
 Returns the configured source repositories.
 
-**Parameters:** none
+**Parameters:** none<br />
 
-**Response:**
+**Response:**<br />
 ```json
 {
   "sources": [
@@ -100,7 +100,7 @@ Returns the configured source repositories.
 
 Lists available artifacts in a source repository.
 
-**Parameters (zod schema):**
+**Parameters (zod schema):**<br />
 ```typescript
 z.object({
   source_url: z.string().url().describe("GitHub repository URL"),
@@ -112,7 +112,7 @@ z.object({
 })
 ```
 
-**Response:**
+**Response:**<br />
 ```json
 {
   "source": "heuristic",
@@ -136,7 +136,7 @@ z.object({
 
 Returns the current install status of an artifact.
 
-**Parameters (zod schema):**
+**Parameters (zod schema):**<br />
 ```typescript
 z.object({
   source_url:  z.string().url().describe("GitHub repository URL"),
@@ -148,7 +148,7 @@ z.object({
 })
 ```
 
-**Response:**
+**Response:**<br />
 ```json
 {
   "artifact_id": "git-commit-assistant",
@@ -165,7 +165,7 @@ z.object({
 
 Installs an artifact from a source repository.
 
-**Parameters (zod schema):**
+**Parameters (zod schema):**<br />
 ```typescript
 z.object({
   source_url:  z.string().url().describe("GitHub repository URL"),
@@ -181,7 +181,7 @@ z.object({
 })
 ```
 
-**Response (success):**
+**Response (success):**<br />
 ```json
 {
   "status": "success",
@@ -190,7 +190,7 @@ z.object({
 }
 ```
 
-**Response (skipped):**
+**Response (skipped):**<br />
 ```json
 {
   "status": "skipped",
@@ -201,7 +201,7 @@ z.object({
 }
 ```
 
-**Response (trust required):**
+**Response (trust required):**<br />
 ```json
 {
   "status": "trust_required",
@@ -216,16 +216,16 @@ z.object({
 
 Add and optionally trust a custom source repository.
 
-**Parameters (zod schema):**
+**Parameters (zod schema):**<br />
 ```typescript
 z.object({
-  url:   z.string().url().describe("Public GitHub repository URL"),
+  url:   z.string().url().describe("GitHub repository URL"),
   name:  z.string().optional().describe("Display name for this source"),
   trust: z.boolean().default(false).describe("Also mark source as trusted"),
 })
 ```
 
-**Response:**
+**Response:**<br />
 ```json
 {
   "status": "added",
@@ -248,17 +248,17 @@ z.object({
 | MCP-REQ-0002 | MUST | The MCP server MUST use `StdioServerTransport` from `@modelcontextprotocol/sdk`. |
 | MCP-REQ-0003 | MUST NOT | MCP mode MUST NOT write anything to `stdout` except the JSON-RPC stream. All diagnostic output MUST go to `stderr`. |
 | MCP-REQ-0004 | MUST | All tool parameters MUST be defined as `zod` schemas. Parameter descriptions MUST be sufficient for an agent to determine when and how to call the tool. |
-| MCP-REQ-0005 | MUST | `install_artifact` MUST check whether the source is trusted before proceeding. If not trusted and `trust: false`, it MUST return `{ status: 'trust_required' }` — it MUST NOT install. |
+| MCP-REQ-0005 | MUST | `install_artifact` MUST check whether the source is trusted before proceeding. If not trusted and `trust: false`, it MUST return `{ status: 'trust_required' }` â€” it MUST NOT install. |
 | MCP-REQ-0006 | MUST | `install_artifact` with `trust: true` MUST call `trustSource()` and `saveConfig()` before proceeding, persisting the trust decision for future sessions. |
-| MCP-REQ-0007 | MUST | All tool handlers MUST return structured JSON responses. They MUST NOT throw — all errors MUST be returned as MCP error responses with a descriptive message. |
+| MCP-REQ-0007 | MUST | All tool handlers MUST return structured JSON responses. They MUST NOT throw â€” all errors MUST be returned as MCP error responses with a descriptive message. |
 | MCP-REQ-0008 | MUST | `createSession()` errors (`ConfigParseError`, `ManifestParseError`) MUST be caught at server startup. The server MUST log the error to `stderr` and exit with code 1 before accepting any tool calls. |
-| MCP-REQ-0009 | MUST | All tool handlers MUST delegate to the same core modules (SPEC-0001 through SPEC-0006) used by TUI and CLI modes. No business logic is reimplemented in the MCP layer. |
+| MCP-REQ-0009 | MUST | All tool handlers MUST delegate to the same core modules ([SPEC-0001](SPEC-0001-config.md) through [SPEC-0006](SPEC-0006-installer.md)) used by TUI and CLI modes. No business logic is reimplemented in the MCP layer. |
 | MCP-REQ-0010 | SHOULD | The server name and version registered with the MCP SDK SHOULD match the package name and version from `package.json`. |
-| MCP-REQ-0011 | MUST | `list_artifacts` MUST apply `filter` and `type` parameters using `fetchCatalog()` with a `CatalogFilter` (SPEC-0005). |
-| MCP-REQ-0012 | MUST | `get_artifact_status` MUST call `resolveInstallBase()` (SPEC-0001) and `getArtifactStatus()` (SPEC-0002) to compute the status. |
+| MCP-REQ-0011 | MUST | `list_artifacts` MUST apply `filter` and `type` parameters using `fetchCatalog()` with a `CatalogFilter` ([SPEC-0005](SPEC-0005-catalog.md)). |
+| MCP-REQ-0012 | MUST | `get_artifact_status` MUST call `resolveInstallBase()` ([SPEC-0001](SPEC-0001-config.md)) and `getArtifactStatus()` ([SPEC-0002](SPEC-0002-manifest.md)) to compute the status. |
 | MCP-REQ-0013 | MUST | The `--mcp` flag MUST be detected in `src/index.ts` before Commander initialises or processes any arguments, and before any output is written to `stdout`. |
-| MCP-REQ-0014 | MUST NOT | Core modules (SPEC-0001 through SPEC-0006) MUST NOT write to `stdout` under any circumstances. Any diagnostic, debug, or informational output from core modules MUST use `stderr` (`console.error`) or be suppressed entirely. Core modules are shared across TUI, CLI, and MCP modes — any `console.log` in a core module will corrupt the MCP JSON-RPC stream. |
-| MCP-REQ-0015 | MUST | Tool handler errors that are expected (network failure, artifact not found, trust required, etc.) MUST be returned as structured content responses with `isError: true` per the MCP SDK pattern — they MUST NOT throw. Unhandled exceptions may become protocol-level MCP errors via the SDK's default handling. |
+| MCP-REQ-0014 | MUST NOT | Core modules ([SPEC-0001](SPEC-0001-config.md) through [SPEC-0006](SPEC-0006-installer.md)) MUST NOT write to `stdout` under any circumstances. Any diagnostic, debug, or informational output from core modules MUST use `stderr` (`console.error`) or be suppressed entirely. Core modules are shared across TUI, CLI, and MCP modes â€” any `console.log` in a core module will corrupt the MCP JSON-RPC stream. |
+| MCP-REQ-0015 | MUST | Tool handler errors that are expected (network failure, artifact not found, trust required, etc.) MUST be returned as structured content responses with `isError: true` per the MCP SDK pattern â€” they MUST NOT throw. Unhandled exceptions may become protocol-level MCP errors via the SDK's default handling. |
 
 ---
 
@@ -270,7 +270,7 @@ z.object({
 | Source not trusted, `trust: false` | `{ status: 'trust_required', ... }` |
 | Artifact not found in catalog | MCP error response: `Artifact '{id}' not found in {url}` |
 | Install skipped (exists/conflict) | `{ status: 'skipped', reason: '...', message: '...' }` |
-| Network error | MCP error response with message from SPEC-0003 |
+| Network error | MCP error response with message from [SPEC-0003](SPEC-0003-provider.md) |
 | Rate limit | MCP error response with rate limit message |
 | Invalid repo URL | MCP error response: validation error from zod |
 

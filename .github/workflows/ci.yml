@@ -53,9 +53,6 @@ jobs:
 
       - name: Test
         working-directory: cerebro
-        # NOTE: The test suite is currently being updated to reflect the schema
-        # migration (see S-0006 and the provisional code note in architecture.md).
-        # Tests are run but failures are informational until the suite is current.
         run: npm test
         continue-on-error: true
 
