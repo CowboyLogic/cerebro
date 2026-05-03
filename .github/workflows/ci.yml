@@ -4,9 +4,11 @@ on:
   push:
     branches-ignore:
       - main
+      - develop
   pull_request:
     branches:
       - main
+      - develop
 
 jobs:
   build:
@@ -33,7 +35,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: cerebro/package-lock.json
 
@@ -51,9 +53,6 @@ jobs:
 
       - name: Test
         working-directory: cerebro
-        # NOTE: The test suite is currently being updated to reflect the schema
-        # migration (see S-0006 and the provisional code note in architecture.md).
-        # Tests are run but failures are informational until the suite is current.
         run: npm test
         continue-on-error: true
 

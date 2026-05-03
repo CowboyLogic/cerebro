@@ -1,8 +1,8 @@
 # S-0008: Developer Workflow
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -56,7 +56,7 @@ Every change to `main` goes through a pull request. The PR template enforces:
 - Process compliance (spec exists, tests written, build passes)
 - Cross-repo impact acknowledgment
 
-**Reviewer requirement:** During solo development, self-merge is permitted. When the first external contributor joins, a required reviewer will be added to branch protection.
+**Reviewer requirement:** During solo development, self-merge is permitted. When the first external contributor joins, a required reviewer will be added to branch protection.<br />
 
 ### Release Process
 
@@ -69,15 +69,15 @@ Releases are **always manually triggered** — there is no automatic release on 
 5. The workflow reads the version from `package.json`, creates a git tag (`vX.Y.Z`), creates a GitHub release, and (for applicable packages) triggers the publish step
 6. Publish is always a separate, manually triggered workflow step — never automatic
 
-**Version coordination for major releases:** When `cerebro-schema` bumps major, all consuming repos must update their dependency and release their own major version before shipping new features. The schema repo's major version gates the suite's major version.
+**Version coordination for major releases:** When `cerebro-schema` bumps major, all consuming repos must update their dependency and release their own major version before shipping new features. The schema repo's major version gates the suite's major version.<br />
 
 ## Rationale
 
-**Trunk-based over GitFlow:** GitFlow's branch overhead (develop, release, hotfix) is appropriate for teams with strict release schedules and parallel version maintenance. This suite has one maintainer, short cycle times, and no parallel supported versions — trunk-based is far simpler and produces an always-releasable `main`.
+**Trunk-based over GitFlow:** GitFlow's branch overhead (develop, release, hotfix) is appropriate for teams with strict release schedules and parallel version maintenance. This suite has one maintainer, short cycle times, and no parallel supported versions — trunk-based is far simpler and produces an always-releasable `main`.<br />
 
-**Conventional Commits:** Provides a machine-readable signal for version bumps, enables automated changelog generation when the process matures, and gives contributors a clear, unambiguous commit format to follow.
+**Conventional Commits:** Provides a machine-readable signal for version bumps, enables automated changelog generation when the process matures, and gives contributors a clear, unambiguous commit format to follow.<br />
 
-**Manual releases:** Automated releases on merge require high confidence that every merge is release-worthy. During early development, some merges are interim steps. Manual triggering keeps the maintainer in control of what constitutes a release. The process can be automated once it has been proven stable and predictable.
+**Manual releases:** Automated releases on merge require high confidence that every merge is release-worthy. During early development, some merges are interim steps. Manual triggering keeps the maintainer in control of what constitutes a release. The process can be automated once it has been proven stable and predictable.<br />
 
 ## Consequences
 

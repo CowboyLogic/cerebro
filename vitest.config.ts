@@ -5,15 +5,15 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     alias: {
       // Resolve .js imports in ESM TypeScript source to .ts files
       '(.+)\\.js$': '$1',
     },
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.ts'],
-      exclude: ['src/index.ts', 'src/ui/interactive.ts'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/index.ts'],
       thresholds: {
         lines: 75,
         functions: 75,

@@ -36,6 +36,8 @@ Suite-level ADRs (`S-`) live here because the CLI repo is the authoritative docu
 
 ### CLI-specific (CLI-series)
 
-| ADR | Title | Status |
-|-----|-------|--------|
-| [CLI-0001](CLI-0001-path-confinement-security.md) | Path confinement as non-negotiable security layer | Accepted |
+| ADR                                                   | Title                                             | Status   |
+|-------------------------------------------------------|---------------------------------------------------|----------|
+| [CLI-0001](CLI-0001-path-confinement-security.md)              | Path confinement as non-negotiable security layer | Accepted |
+| [CLI-0002](CLI-0002-tui-centralized-state-machine.md)          | TUI centralized state machine                     | Accepted |
+| [CLI-0003](CLI-0003-github-auth-and-catalog-cache.md)          | GitHub token detection and session catalog cache  | Accepted |

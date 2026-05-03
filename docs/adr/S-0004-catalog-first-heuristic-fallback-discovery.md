@@ -1,8 +1,8 @@
 # S-0004: Catalog-First Discovery with Heuristic Fallback
 
-**Level:** Suite
-**Status:** Accepted
-**Date:** 2026-03-28
+**Level:** Suite<br />
+**Status:** Accepted<br />
+**Date:** 2026-03-28<br />
 
 ## Context
 
@@ -21,11 +21,11 @@ Both stages must produce results that conform to the same `Artifact` shape with 
 
 ## Rationale
 
-**Maximizes day-one utility.** Cerebro works against the existing ecosystem of AI artifact repos without requiring any action from repo maintainers.
+**Maximizes day-one utility.** Cerebro works against the existing ecosystem of AI artifact repos without requiring any action from repo maintainers.<br />
 
-**Creates a natural adoption path.** Teams that want precise install control add a `cerebro-catalog.yaml`. Teams that don't still get reasonable results. There is no cliff.
+**Creates a natural adoption path.** Teams that want precise install control add a `cerebro-catalog.yaml`. Teams that don't still get reasonable results. There is no cliff.<br />
 
-**Single downstream shape.** Requiring both discovery strategies to produce the same `Artifact` type prevents the UI and installer layers from needing to handle two different data shapes — simplifying all code downstream of discovery.
+**Single downstream shape.** Requiring both discovery strategies to produce the same `Artifact` type prevents the UI and installer layers from needing to handle two different data shapes — simplifying all code downstream of discovery.<br />
 
 Alternatives considered:
 - **Catalog-only, require adoption** — rejected; too high a barrier at launch, insufficient initial catalog coverage.

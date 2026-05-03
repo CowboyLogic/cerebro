@@ -1,9 +1,9 @@
 # [Component / Feature] Specification
 
-**Product:** cerebro CLI | cerebro-vscode-ext | cerebro-schema | Suite
-**Status:** Draft | Accepted | Superseded by [link]
-**Date:** YYYY-MM-DD
-**Related ADRs:** [S-XXXX](../adr/S-XXXX.md), [CLI-XXXX](../adr/CLI-XXXX.md)
+**Product:** cerebro CLI | cerebro-vscode-ext | cerebro-schema | Suite<br />
+**Status:** Draft | Accepted | Superseded by [link]<br />
+**Date:** YYYY-MM-DD<br />
+**Related ADRs:** [S-XXXX](../adr/S-XXXX.md), [CLI-XXXX](../adr/CLI-XXXX.md)<br />
 
 ---
 
@@ -14,9 +14,9 @@ Reference the suite design brief or relevant ADR if this is a direct implementat
 
 ## Scope
 
-**In scope:** What this spec covers. Be explicit.
+**In scope:** What this spec covers. Be explicit.<br />
 
-**Out of scope:** What this spec deliberately does not address. This prevents scope creep
+**Out of scope:** What this spec deliberately does not address. This prevents scope creep<br />
 and documents intentional gaps.
 
 ---

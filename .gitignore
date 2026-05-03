@@ -6,3 +6,12 @@ Thumbs.db
 cerebro-debug.log
 
 agent-output/
+
+# Copilot/Claude skill installs — not part of this repo
+.agents/
+.github/skills/
+.claude/commands/
+
+# mkdocs test site
+site/
+
