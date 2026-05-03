@@ -32,10 +32,15 @@ theme:
   features:
     - navigation.instant
     - navigation.tracking
+    - navigation.sections
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - navigation.footer
     - search.suggest
     - search.highlight
     - content.tabs.link
-    - content.code.annotation
+    - content.code.annotate
     - content.code.copy
     - toc.follow
   language: en
@@ -121,7 +126,6 @@ nav:
       - SPEC-0008 CLI: spec/SPEC-0008-cli.md
       - SPEC-0009 MCP: spec/SPEC-0009-mcp.md
       - SPEC-0010 GitHub Auth and Catalog Cache: spec/SPEC-0010-github-auth-and-catalog-cache.md
-  - Contributing: developer/contributing.md
 
 # Extra CSS
 extra_css:
