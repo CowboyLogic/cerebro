@@ -116,16 +116,19 @@ nav:
           - CLI-0002 TUI Centralised State Machine: adr/CLI-0002-tui-centralized-state-machine.md
           - CLI-0003 GitHub Auth and Catalog Cache: adr/CLI-0003-github-auth-and-catalog-cache.md
   - Specifications:
-      - SPEC-0001 Configuration: spec/SPEC-0001-config.md
-      - SPEC-0002 Manifest: spec/SPEC-0002-manifest.md
-      - SPEC-0003 Provider: spec/SPEC-0003-provider.md
-      - SPEC-0004 Session: spec/SPEC-0004-session.md
-      - SPEC-0005 Catalog: spec/SPEC-0005-catalog.md
-      - SPEC-0006 Installer: spec/SPEC-0006-installer.md
-      - SPEC-0007 TUI: spec/SPEC-0007-tui.md
-      - SPEC-0008 CLI: spec/SPEC-0008-cli.md
-      - SPEC-0009 MCP: spec/SPEC-0009-mcp.md
-      - SPEC-0010 GitHub Auth and Catalog Cache: spec/SPEC-0010-github-auth-and-catalog-cache.md
+      - Core:
+          - SPEC-0001 Configuration: spec/SPEC-0001-config.md
+          - SPEC-0002 Manifest: spec/SPEC-0002-manifest.md
+          - SPEC-0003 Provider: spec/SPEC-0003-provider.md
+          - SPEC-0004 Session: spec/SPEC-0004-session.md
+          - SPEC-0005 Catalog: spec/SPEC-0005-catalog.md
+          - SPEC-0006 Installer: spec/SPEC-0006-installer.md
+      - Interfaces:
+          - SPEC-0007 TUI: spec/SPEC-0007-tui.md
+          - SPEC-0008 CLI: spec/SPEC-0008-cli.md
+          - SPEC-0009 MCP: spec/SPEC-0009-mcp.md
+      - Infrastructure:
+          - SPEC-0010 GitHub Auth and Catalog Cache: spec/SPEC-0010-github-auth-and-catalog-cache.md
 
 # Extra CSS
 extra_css:
