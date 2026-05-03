@@ -1,5 +1,78 @@
 # AGENTS.md — Ground Rules for AI Coding Agents
 
+## Commands
+
+All commands run from the project root (`cerebro/`):
+
+```bash
+npm start              # Run TUI mode (tsx src/index.ts)
+npm run dev            # Watch mode
+npm run build          # Compile TypeScript to dist/
+
+npm test               # Run all tests (280+), must pass before any PR
+npm run test:unit      # Unit tests only
+npm run test:watch     # Watch mode
+npm run test:coverage  # Coverage report (thresholds: 75% lines/functions, 70% branches)
+```
+
+Run a single test file: `npx vitest run tests/unit/core/config.test.ts`
+
+---
+
+## Architecture
+
+**Three execution modes, one core engine.** All modes call into `src/core/` exclusively. No
+business logic lives in `src/tui/`, `src/cli/`, or `src/mcp/`.
+
+```text
+src/index.ts          ← entry point; detects --mcp before Commander runs
+├── src/tui/          ← TUI mode  (cerebro, no args) — Ink-based interactive UI
+├── src/cli/          ← CLI mode  (cerebro install …) — parameterised, scriptable
+├── src/mcp/          ← MCP mode  (cerebro --mcp)    — stdio JSON-RPC server
+└── src/core/         ← shared engine (all modes delegate here)
+    ├── config.ts     SPEC-0001 — config manager (~/.config/cerebro/config.yaml)
+    ├── manifest.ts   SPEC-0002 — install manifest (~/.config/cerebro/installed.yaml)
+    ├── provider.ts   SPEC-0003 — SourceProvider interface + GitHubProvider
+    ├── session.ts    SPEC-0004 — createSession() entry point for all modes
+    ├── catalog.ts    SPEC-0005 — catalog-first + heuristic-fallback discovery
+    └── installer.ts  SPEC-0006 — installArtifact() orchestration
+```
+
+**Mode detection:** `src/index.ts` checks for `--mcp` before Commander initialises. Commander
+writes help/errors to stdout — if it ran first it would corrupt the JSON-RPC stream.
+
+**Core entry point:** `createSession()` (`src/core/session.ts`) is the shared entry point for
+all three modes. Call it first; everything else flows from the session object it returns.
+
+**Installation (SPEC-0006):** `installArtifact()` **never throws** — always returns an
+`InstallOutcome`. Callers check `outcome.status`, never try/catch.
+
+**Provider abstraction (SPEC-0003):** `createProvider(url)` detects the provider from the URL
+domain. MVP ships `GitHubProvider`. No module outside `provider.ts` has knowledge of
+GitHub-specific APIs. Adding a new host means implementing `SourceProvider` and registering the
+domain — zero changes to catalog, installer, session, TUI, CLI, or MCP.
+
+**Config and manifest paths:**
+- Config: `~/.config/cerebro/config.yaml` (created from bundled defaults on first run)
+- Manifest: `~/.config/cerebro/installed.yaml`
+
+---
+
+## Key Types
+
+All core types come from `@cowboylogic/cerebro-schema`. Do not re-declare them locally.
+
+- `ArtifactType`: `'skill' | 'instruction' | 'prompt' | 'agent' | 'hook' | 'mcp-server' | 'snippet' | 'workflow' | 'other'`
+- `ToolId`: `'claude-code' | 'copilot' | 'agents' | 'cursor' | 'windsurf' | 'opencode'`
+- `Scope`: `'workspace' | 'user'`
+- `Artifact`: `{ id, name, type, source, description?, version?, tags?, supports? }`
+
+CLI-local types (in `src/core/config.ts`):
+- `SourceEntry`: `{ name, url, enabled, trusted }`
+- `CerebroConfig`: full config structure, mirrors `config.yaml`
+
+---
+
 ## Keeping This File Current
 
 This file, `CLAUDE.md`, and all `.agents/skills/` files in this repo are **living documents**. They exist so any coding agent — Claude Code, GitHub Copilot, or any other — arrives with accurate context and doesn't need to rediscover conventions.
@@ -174,6 +247,28 @@ artifacts:
 - **Installed-by header:** All installers prepend an HTML comment `<!-- Installed by cerebro … -->` to installed files.
 - **Platform paths:** Use `getUserConfigDir()` from `src/utils/platform.ts` for config dirs — it handles Windows (`%APPDATA%`), macOS (`~/Library/Application Support`), and Linux (`$XDG_CONFIG_HOME` / `~/.config`).
 
+### TUI Conventions (CLI-0002)
+
+The TUI uses a centralized state machine. These rules are non-negotiable:
+
+- **`screens.tsx` components MUST NOT call `useInput`** — keyboard handling belongs exclusively in `app.tsx` via a single `useInput` that dispatches to `handleKey()` in `transitions.ts`.
+- **`screens.tsx` components MUST NOT call `useState` for cursor or navigation state** — all cursor positions, active screen, filter text, and sub-screen stages live in `TuiState` (`types.ts`).
+- **`transitions.ts` MUST have no Ink import** — it is a pure TypeScript module: `handleKey(state: TuiState, key: KeyEvent): TuiState`. No JSX, no side effects.
+- **All navigation logic lives in `transitions.ts`** — screen transitions, cursor movement, filter clearing, sub-screen stage changes. If it changes `TuiState`, it belongs here.
+- Screen components are pure render functions: given props in, JSX out.
+
+Verify compliance at any time:
+
+```bash
+grep -r "useInput" src/tui/        # must return only app.tsx
+grep "useState" src/tui/screens.tsx  # must return zero results
+```
+
+Rationale: distributed `useInput` in screen components makes navigation logic untestable without
+Ink's async event system. The centralized model makes every navigation requirement in SPEC-0007
+testable as a plain synchronous call to `handleKey()`. See
+`docs/adr/CLI-0002-tui-centralized-state-machine.md` for full rationale.
+
 ---
 
 ## Test Conventions
@@ -183,3 +278,8 @@ artifacts:
 - Integration tests use `memfs` for real in-memory file I/O without touching disk.
 - Do not mock the GitHub API in integration tests — use fixtures or recorded responses.
 - `npm run test:unit` / `test:integration` / `test:cli` run subsets; `npm test` runs all (from the project root).
+- All tests are in `tests/unit/` — no separate integration or CLI test categories.
+- Test files mirror source structure: `tests/unit/core/`, `tests/unit/cli/`, `tests/unit/tui/`, `tests/unit/mcp/`.
+- Each test references the requirement ID it covers (e.g. `// TUI-REQ-0007`).
+- Coverage excludes `src/index.ts`.
+- **Ink keyboard testing caveat:** Escape key uses `setImmediate` internally — cannot be tested synchronously. Arrow key navigation requires React `act()` to flush batch updates.
