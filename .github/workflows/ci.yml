@@ -56,9 +56,30 @@ jobs:
         run: npm test
         continue-on-error: true
 
+  docs:
+    name: Docs build (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cerebro
+        uses: actions/checkout@v6
+        with:
+          path: cerebro
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install MkDocs dependencies
+        run: pip install mkdocs-material mkdocs-callouts
+
+      - name: Build docs
+        working-directory: cerebro
+        run: mkdocs build --strict
+
   ci:
     name: Build & Test
-    needs: build
+    needs: [build, docs]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -66,5 +87,9 @@ jobs:
         run: |
           if [ "${{ needs.build.result }}" != "success" ]; then
             echo "Matrix result: ${{ needs.build.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.docs.result }}" != "success" ]; then
+            echo "Docs result: ${{ needs.docs.result }}"
             exit 1
           fi
