@@ -63,6 +63,45 @@
 }
 
 /* ========================================================================
+   HEADER — match page background, coral lettering
+   ======================================================================== */
+
+.md-header {
+  background-color: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  /* Subtle bottom border to separate header from content */
+  box-shadow: 0 1px 0 var(--md-default-fg-color--lightest);
+}
+
+/* Site name — coral */
+.md-header__title,
+.md-header__title .md-ellipsis {
+  color: var(--md-primary-fg-color);
+  font-weight: 600;
+}
+
+/* Header icons (GitHub, color toggle, search icon) — muted, coral on hover */
+.md-header .md-icon {
+  color: var(--md-default-fg-color--light);
+}
+
+.md-header .md-icon:hover {
+  color: var(--md-primary-fg-color);
+  opacity: 1;
+}
+
+/* Search input — slightly sunken from the header background */
+[data-md-color-scheme="default"] .md-search__input {
+  background-color: var(--md-default-bg-color--lightest);
+  color: var(--md-default-fg-color);
+}
+
+[data-md-color-scheme="slate"] .md-search__input {
+  background-color: var(--md-default-bg-color--light);
+  color: var(--md-default-fg-color);
+}
+
+/* ========================================================================
    GITHUB FLAVORED MARKDOWN CALLOUTS - CUSTOM ICONS
    Template taken from mkdocs-material docs
    SVG icons and colors from GitHub
