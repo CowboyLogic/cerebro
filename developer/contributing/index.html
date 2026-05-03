@@ -2186,13 +2186,13 @@
 <p>Runs via <code>tsx</code> with file watching. Changes take effect immediately without rebuilding.</p>
 <hr />
 <h2 id="branching">Branching<a class="headerlink" href="#branching" title="Permanent link">&para;</a></h2>
-<p>Trunk-based. Short-lived branches from <code>main</code>, merged via pull request.</p>
+<p>Trunk-based. Short-lived branches from <code>develop</code>, merged via pull request.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>feat/&lt;short-description&gt;      new capability
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>fix/&lt;short-description&gt;       bug fix
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>docs/&lt;short-description&gt;      documentation only
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>chore/&lt;short-description&gt;     maintenance, deps, tooling
 </span></code></pre></div>
-<p><code>main</code> is always releasable.</p>
+<p><code>develop</code> is the integration branch. <code>main</code> is reserved for releases.</p>
 <hr />
 <h2 id="commit-messages">Commit messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h2>
 <p><a href="https://www.conventionalcommits.org/">Conventional Commits</a> are required:</p>
@@ -2205,7 +2205,7 @@
 <p>A <code>BREAKING CHANGE:</code> footer on any commit type triggers a major bump.</p>
 <hr />
 <h2 id="pull-requests">Pull requests<a class="headerlink" href="#pull-requests" title="Permanent link">&para;</a></h2>
-<p>Every merge to <code>main</code> goes through a PR. CI must pass: the pipeline runs <code>npm run build</code> and <code>npm test</code>.</p>
+<p>Every merge to <code>develop</code> goes through a PR. CI must pass: the pipeline runs <code>npm run build</code> and <code>npm test</code>.</p>
 <p>Fill in the PR template completely, including the cross-repo impact section if relevant.</p>
 <hr />
 <h2 id="cross-repo-changes">Cross-repo changes<a class="headerlink" href="#cross-repo-changes" title="Permanent link">&para;</a></h2>
