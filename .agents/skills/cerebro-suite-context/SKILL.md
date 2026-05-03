@@ -14,9 +14,9 @@ Cerebro is a multi-repo suite of tools for discovering and installing AI artifac
 | `cerebro` | CLI installer + canonical suite docs | Active |
 | `cerebro-schema` | Shared JSON Schema, TypeScript types, AJV validator | Active |
 | `cerebro-vscode-ext` | VS Code extension | Active |
-| `cerebro-vs-ext` | Visual Studio extension | Planned |
-| `cerebro-intellij-ext` | IntelliJ IDEA plugin | Planned |
-| `cerebro-eclipse-ext` | Eclipse plugin | Planned |
+| `cerebro-vs-ext` | Visual Studio extension | Placeholder |
+| `cerebro-intellij-ext` | IntelliJ IDEA plugin | Placeholder |
+| `cerebro-eclipse-ext` | Eclipse plugin | Placeholder |
 
 Suite documentation home: `CowboyLogic/cerebro` (this or the sibling repo).
 Architecture Decision Records: `cerebro/docs/adr/`.

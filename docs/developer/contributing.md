@@ -103,7 +103,7 @@ Runs via `tsx` with file watching. Changes take effect immediately without rebui
 
 ## Branching
 
-Trunk-based. Short-lived branches from `main`, merged via pull request.
+Trunk-based. Short-lived branches from `develop`, merged via pull request.
 
 ```
 feat/<short-description>      new capability
@@ -112,7 +112,7 @@ docs/<short-description>      documentation only
 chore/<short-description>     maintenance, deps, tooling
 ```
 
-`main` is always releasable.
+`develop` is the integration branch. `main` is reserved for releases.
 
 ---
 
@@ -134,7 +134,7 @@ A `BREAKING CHANGE:` footer on any commit type triggers a major bump.
 
 ## Pull requests
 
-Every merge to `main` goes through a PR. CI must pass: the pipeline runs `npm run build` and `npm test`.
+Every merge to `develop` goes through a PR. CI must pass: the pipeline runs `npm run build` and `npm test`.
 
 Fill in the PR template completely, including the cross-repo impact section if relevant.
 

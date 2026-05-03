@@ -7,7 +7,7 @@ All commands run from the project root (`cerebro/`):
 ```bash
 npm start              # Run TUI mode (tsx src/index.ts)
 npm run dev            # Watch mode
-npm run build          # Compile TypeScript to dist/
+npm run build          # Compile TypeScript to bin/
 
 npm test               # Run all tests (280+), must pass before any PR
 npm run test:unit      # Unit tests only
@@ -84,6 +84,26 @@ Update them in the same PR as the code change whenever:
 - Key types, entry points, commands, or security rules change
 - Test fixtures or thresholds change
 - A decision is made that future agents should know about
+
+The three skill files in `.agents/skills/` must be kept current by the same rule:
+
+| Skill | Update when |
+|-------|-------------|
+| `cerebro-cli-architecture` | Execution modes, core data flow, security layers, TUI conventions, MCP structure, type ownership, or target installer pattern change |
+| `cerebro-dev-workflow` | Branch strategy, CI check names, commit format, release process, or versioning rules change |
+| `cerebro-suite-context` | Repo roster, workspace layout, bootstrap process, CI dependency pattern, or catalog format change |
+
+A stale skill gives agents confidently wrong guidance — treat skill files with the same urgency as `AGENTS.md` itself.
+
+**`mkdocs.yml` nav must always reflect the current state of `docs/`.** When you add, rename, move, or delete any file under `docs/`, update the `nav:` section of `mkdocs.yml` in the same commit. A page that exists but is absent from `nav:` is invisible to site visitors; a nav entry pointing to a deleted file breaks the build.
+
+After any change to `docs/` or `mkdocs.yml`, run a strict local build to catch nav and link errors before committing:
+
+```bash
+mkdocs build --strict
+```
+
+This requires `pip install mkdocs-material mkdocs-callouts` once. CI enforces the same check, but catching it locally is faster than waiting for a failed run.
 
 Do not defer doc updates. A stale `AGENTS.md` is worse than no `AGENTS.md` — it actively misleads.
 
