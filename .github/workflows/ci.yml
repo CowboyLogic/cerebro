@@ -21,14 +21,14 @@ jobs:
 
     steps:
       - name: Checkout cerebro-schema
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: CowboyLogic/cerebro-schema
           path: cerebro-schema
           token: ${{ secrets.CEREBRO_SCHEMA_READ_TOKEN }}
 
       - name: Checkout cerebro
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: cerebro
 
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout cerebro
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: cerebro
 
